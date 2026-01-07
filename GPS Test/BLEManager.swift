@@ -71,16 +71,14 @@ class BLEManager: NSObject, ObservableObject {
         }
         
         // Extract longitude (offset 30, 4 bytes, little-endian int32)
-        let longitudeRaw = Int32(bytes[30]) |
-                          (Int32(bytes[31]) << 8) |
-                          (Int32(bytes[32]) << 16) |
-                          (Int32(bytes[33]) << 24)
+        let longitudeRaw = data.withUnsafeBytes { buffer in
+            buffer.loadUnaligned(fromByteOffset: 30, as: Int32.self)
+        }
         
         // Extract latitude (offset 34, 4 bytes, little-endian int32)
-        let latitudeRaw = Int32(bytes[34]) |
-                         (Int32(bytes[35]) << 8) |
-                         (Int32(bytes[36]) << 16) |
-                         (Int32(bytes[37]) << 24)
+        let latitudeRaw = data.withUnsafeBytes { buffer in
+            buffer.loadUnaligned(fromByteOffset: 34, as: Int32.self)
+        }
         
         // Convert to degrees (divide by 10^7)
         let newLongitude = Double(longitudeRaw) / 10_000_000.0
@@ -112,6 +110,11 @@ extension BLEManager: CBCentralManagerDelegate {
     }
     
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
+        // Prevent connecting to multiple devices or reconnecting if already connected/connecting
+        guard self.peripheral == nil, !isConnected else {
+            return
+        }
+        
         // Check if the device name starts with "RaceBox"
         if let name = peripheral.name, name.hasPrefix("RaceBox") {
             self.peripheral = peripheral
