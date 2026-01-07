@@ -32,25 +32,25 @@ class BLEManager: NSObject, ObservableObject {
         // Packet size
         static let packetSize = 88
         
-        // GPS data offsets in the packet
-        static let numSatellitesOffset = 5
-        static let longitudeOffset = 6
-        static let latitudeOffset = 10
-        static let altitudeOffset = 14
-        static let speedOffset = 18
-        static let headingOffset = 26
-        static let accelerometerXOffset = 68
-        static let accelerometerYOffset = 70
-        static let accelerometerZOffset = 72
-        static let gyroscopeXOffset = 74
-        static let gyroscopeYOffset = 76
-        static let gyroscopeZOffset = 78
+        // Absolute offsets = payload offset + 6
+        static let numSatellitesOffset = 29   // payload 23 + 6
+        static let longitudeOffset = 30       // payload 24 + 6
+        static let latitudeOffset = 34        // payload 28 + 6
+        static let altitudeOffset = 38        // payload 32 + 6
+        static let speedOffset = 54           // payload 48 + 6
+        static let headingOffset = 58         // payload 52 + 6
+        static let accelerometerXOffset = 74  // payload 68 + 6
+        static let accelerometerYOffset = 76  // payload 70 + 6
+        static let accelerometerZOffset = 78  // payload 72 + 6
+        static let gyroscopeXOffset = 80      // payload 74 + 6
+        static let gyroscopeYOffset = 82      // payload 76 + 6
+        static let gyroscopeZOffset = 84      // payload 78 + 6
         
         // Conversion factor for GPS coordinates
         static let coordinateScale = 10_000_000.0
         static let altitudeScale = 1000.0  // mm to meters
         static let speedScale = 1000.0  // mm/s to m/s
-        static let headingScale = 1_000_000.0  // degrees * 1e-6
+        static let headingScale = 100_000.0  // degrees * 1e5
         
         // Device name prefix for filtering
         static let deviceNamePrefix = "RaceBox"
@@ -63,12 +63,12 @@ class BLEManager: NSObject, ObservableObject {
     @Published var speed: Double = 0.0  // m/s
     @Published var altitude: Double = 0.0  // meters
     @Published var heading: Double = 0.0  // degrees
-    @Published var accelerometerX: Double = 0.0  // milli-g
-    @Published var accelerometerY: Double = 0.0  // milli-g
-    @Published var accelerometerZ: Double = 0.0  // milli-g
-    @Published var gyroscopeX: Double = 0.0  // centi-deg/s
-    @Published var gyroscopeY: Double = 0.0  // centi-deg/s
-    @Published var gyroscopeZ: Double = 0.0  // centi-deg/s
+    @Published var accelerometerX: Double = 0.0  // g
+    @Published var accelerometerY: Double = 0.0  // g
+    @Published var accelerometerZ: Double = 0.0  // g
+    @Published var gyroscopeX: Double = 0.0  // deg/s
+    @Published var gyroscopeY: Double = 0.0  // deg/s
+    @Published var gyroscopeZ: Double = 0.0  // deg/s
     @Published var isConnected: Bool = false
     @Published var isScanning: Bool = false
     @Published var statusMessage: String = "Ready to connect"
@@ -194,6 +194,16 @@ class BLEManager: NSObject, ObservableObject {
         let newSpeed = Double(speedRaw) / ProtocolConstants.speedScale
         let newHeading = Double(headingRaw) / ProtocolConstants.headingScale
         
+        // Accelerometer: milli-g -> g
+        let newAccelX = Double(accelX) / 1000.0
+        let newAccelY = Double(accelY) / 1000.0
+        let newAccelZ = Double(accelZ) / 1000.0
+        
+        // Gyroscope: centi-deg/s -> deg/s
+        let newGyroX = Double(gyroX) / 100.0
+        let newGyroY = Double(gyroY) / 100.0
+        let newGyroZ = Double(gyroZ) / 100.0
+        
         // Update on main thread
         DispatchQueue.main.async {
             self.longitude = newLongitude
@@ -202,12 +212,12 @@ class BLEManager: NSObject, ObservableObject {
             self.altitude = newAltitude
             self.speed = newSpeed
             self.heading = newHeading
-            self.accelerometerX = Double(accelX)
-            self.accelerometerY = Double(accelY)
-            self.accelerometerZ = Double(accelZ)
-            self.gyroscopeX = Double(gyroX)
-            self.gyroscopeY = Double(gyroY)
-            self.gyroscopeZ = Double(gyroZ)
+            self.accelerometerX = newAccelX
+            self.accelerometerY = newAccelY
+            self.accelerometerZ = newAccelZ
+            self.gyroscopeX = newGyroX
+            self.gyroscopeY = newGyroY
+            self.gyroscopeZ = newGyroZ
         }
     }
 }
