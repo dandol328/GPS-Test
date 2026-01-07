@@ -165,7 +165,7 @@ class BLEManager: NSObject, ObservableObject {
             buffer.loadUnaligned(fromByteOffset: ProtocolConstants.speedOffset, as: Int32.self)
         }
         
-        // Extract heading (4 bytes, little-endian int32, in degrees * 1e-5)
+        // Extract heading (4 bytes, little-endian int32, in degrees * 1e5)
         let headingRaw = data.withUnsafeBytes { buffer in
             buffer.loadUnaligned(fromByteOffset: ProtocolConstants.headingOffset, as: Int32.self)
         }
