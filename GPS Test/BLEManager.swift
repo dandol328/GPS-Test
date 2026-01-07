@@ -35,7 +35,6 @@ class BLEManager: NSObject, ObservableObject {
         static let longitudeOffset = 24
         static let latitudeOffset = 28
         static let altitudeOffset = 32
-        static let altitudeMSLOffset = 36
         static let speedOffset = 48
         static let headingOffset = 52
         static let accelerometerXOffset = 68
