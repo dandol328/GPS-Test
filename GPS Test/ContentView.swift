@@ -4,9 +4,9 @@
 //
 //  Created by Dan on 1/6/26.
 //
- 
+
 import SwiftUI
- 
+
 struct ContentView: View {
     @StateObject private var bleManager = BLEManager()
     
@@ -123,7 +123,7 @@ struct ContentView: View {
         .padding()
     }
 }
- 
+
 struct SectionHeader: View {
     let title: String
     
@@ -133,7 +133,7 @@ struct SectionHeader: View {
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
- 
+
 struct DataCard: View {
     let label: String
     let value: String
@@ -157,7 +157,7 @@ struct DataCard: View {
         )
     }
 }
- 
+
 #Preview {
     ContentView()
 }
