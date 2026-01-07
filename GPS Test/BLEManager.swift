@@ -52,8 +52,8 @@ class BLEManager: NSObject, ObservableObject {
     }
     
     private func parseGPSData(_ data: Data) {
-        // Ensure we have at least 80 bytes (minimum for GPS data packet)
-        guard data.count >= 80 else {
+        // Ensure we have at least 88 bytes (RaceBox Data Message packet size)
+        guard data.count >= 88 else {
             return
         }
         
