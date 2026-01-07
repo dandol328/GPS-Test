@@ -33,23 +33,23 @@ The app implements the RaceBox Mini BLE protocol:
 
 The app parses the following fields from the 88-byte packet:
 
-| Field | Offset | Type | Description |
-|-------|--------|------|-------------|
+| Field | Absolute Offset | Type | Description |
+|-------|-----------------|------|-------------|
 | Header | 0-1 | uint16 | Frame start (0xB5 0x62) |
 | Message Class | 2 | uint8 | 0xFF for RaceBox Data Message |
 | Message ID | 3 | uint8 | 0x01 for live GPS data |
-| Num Satellites | 23 | uint8 | Number of satellites tracked |
-| Longitude | 24-27 | int32 | Longitude in degrees × 10^7 |
-| Latitude | 28-31 | int32 | Latitude in degrees × 10^7 |
-| Altitude | 32-35 | int32 | Height above ellipsoid in mm |
-| Speed | 48-51 | int32 | Ground speed in mm/s |
-| Heading | 52-55 | int32 | Heading of motion in degrees × 10^5 |
-| Accel X | 68-69 | int16 | X-axis acceleration in milli-g |
-| Accel Y | 70-71 | int16 | Y-axis acceleration in milli-g |
-| Accel Z | 72-73 | int16 | Z-axis acceleration in milli-g |
-| Gyro X | 74-75 | int16 | X-axis rotation rate in centi-deg/s |
-| Gyro Y | 76-77 | int16 | Y-axis rotation rate in centi-deg/s |
-| Gyro Z | 78-79 | int16 | Z-axis rotation rate in centi-deg/s |
+| Num Satellites | 29 | uint8 | Number of satellites tracked (payload offset 23) |
+| Longitude | 30-33 | int32 | Longitude in degrees × 10^7 |
+| Latitude | 34-37 | int32 | Latitude in degrees × 10^7 |
+| Altitude | 38-41 | int32 | Height above ellipsoid in mm |
+| Speed | 54-57 | int32 | Ground speed in mm/s (app displays m/s) |
+| Heading | 58-61 | int32 | Heading of motion in degrees × 10^5 (app displays degrees) |
+| Accelerometer X | 74-75 | int16 | milli-g (app displays g) |
+| Accelerometer Y | 76-77 | int16 | milli-g (app displays g) |
+| Accelerometer Z | 78-79 | int16 | milli-g (app displays g) |
+| Gyroscope X | 80-81 | int16 | centi-degrees/sec (app displays deg/s) |
+| Gyroscope Y | 82-83 | int16 | centi-degrees/sec (app displays deg/s) |
+| Gyroscope Z | 84-85 | int16 | centi-degrees/sec (app displays deg/s) |
 
 ## Usage
 
