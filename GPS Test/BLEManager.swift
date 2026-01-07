@@ -9,7 +9,7 @@
 import CoreBluetooth
 import Foundation
 
-class BLEManager: NSObject, ObservableObject {
+class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     // Connection state enum for clearer state management
     private enum ConnectionState {
         case disconnected
@@ -74,7 +74,55 @@ class BLEManager: NSObject, ObservableObject {
     @Published var gyroscopeY: Double = 0.0
     @Published var gyroscopeZ: Double = 0.0
     @Published var isConnected: Bool = false
+    @Published var isScanning: Bool = false
     @Published var statusMessage: String = "Disconnected"
+    
+    // BLE properties
+    private var centralManager: CBCentralManager!
+    private var connectedPeripheral: CBPeripheral?
+    private var txCharacteristic: CBCharacteristic?
+    private var connectionState: ConnectionState = .disconnected
+    
+    // Service and Characteristic UUIDs (from RaceBox protocol)
+    private let serviceUUID = CBUUID(string: "6E400001-B5A3-F393-E0A9-E50E24DCCA9E")
+    private let txCharacteristicUUID = CBUUID(string: "6E400003-B5A3-F393-E0A9-E50E24DCCA9E")
+    
+    override init() {
+        super.init()
+        centralManager = CBCentralManager(delegate: self, queue: nil)
+    }
+    
+    // MARK: - Public Methods
+    
+    func startScanning() {
+        guard connectionState == .disconnected else { return }
+        guard centralManager.state == .poweredOn else {
+            DispatchQueue.main.async {
+                self.statusMessage = "Bluetooth not available"
+            }
+            return
+        }
+        
+        connectionState = .scanning
+        DispatchQueue.main.async {
+            self.isScanning = true
+            self.statusMessage = "Scanning for RaceBox..."
+        }
+        
+        centralManager.scanForPeripherals(withServices: [serviceUUID], options: nil)
+    }
+    
+    func disconnect() {
+        if let peripheral = connectedPeripheral {
+            centralManager.cancelPeripheralConnection(peripheral)
+        }
+        connectionState = .disconnected
+        DispatchQueue.main.async {
+            self.isConnected = false
+            self.isScanning = false
+            self.statusMessage = "Disconnected"
+        }
+    }
     
     // ... rest of class (parsing code unchanged aside from using the above constants)
     
@@ -156,5 +204,121 @@ class BLEManager: NSObject, ObservableObject {
     }
     
     // MARK: - CBCentralManagerDelegate
-    // ... rest of file unchanged
+    
+    func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        switch central.state {
+        case .poweredOn:
+            DispatchQueue.main.async {
+                self.statusMessage = "Bluetooth ready"
+            }
+        case .poweredOff:
+            DispatchQueue.main.async {
+                self.statusMessage = "Bluetooth is off"
+            }
+        case .unauthorized:
+            DispatchQueue.main.async {
+                self.statusMessage = "Bluetooth unauthorized"
+            }
+        case .unsupported:
+            DispatchQueue.main.async {
+                self.statusMessage = "Bluetooth not supported"
+            }
+        default:
+            DispatchQueue.main.async {
+                self.statusMessage = "Bluetooth unavailable"
+            }
+        }
+    }
+    
+    func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
+        // Check if device name starts with "RaceBox"
+        guard let name = peripheral.name, name.hasPrefix(ProtocolConstants.deviceNamePrefix) else {
+            return
+        }
+        
+        // Stop scanning and connect
+        centralManager.stopScan()
+        connectionState = .connecting
+        connectedPeripheral = peripheral
+        peripheral.delegate = self
+        
+        DispatchQueue.main.async {
+            self.isScanning = false
+            self.statusMessage = "Connecting to \(name)..."
+        }
+        
+        centralManager.connect(peripheral, options: nil)
+    }
+    
+    func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        connectionState = .connected
+        DispatchQueue.main.async {
+            self.isConnected = true
+            self.statusMessage = "Connected"
+        }
+        
+        // Discover services
+        peripheral.discoverServices([serviceUUID])
+    }
+    
+    func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
+        connectionState = .disconnected
+        connectedPeripheral = nil
+        
+        DispatchQueue.main.async {
+            self.isConnected = false
+            self.isScanning = false
+            self.statusMessage = "Failed to connect"
+        }
+    }
+    
+    func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
+        connectionState = .disconnected
+        connectedPeripheral = nil
+        txCharacteristic = nil
+        
+        DispatchQueue.main.async {
+            self.isConnected = false
+            self.isScanning = false
+            self.statusMessage = "Disconnected"
+        }
+    }
+}
+
+// MARK: - CBPeripheralDelegate
+
+extension BLEManager: CBPeripheralDelegate {
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+        guard let services = peripheral.services else { return }
+        
+        for service in services {
+            if service.uuid == serviceUUID {
+                peripheral.discoverCharacteristics([txCharacteristicUUID], for: service)
+            }
+        }
+    }
+    
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
+        guard let characteristics = service.characteristics else { return }
+        
+        for characteristic in characteristics {
+            if characteristic.uuid == txCharacteristicUUID {
+                txCharacteristic = characteristic
+                peripheral.setNotifyValue(true, for: characteristic)
+                
+                DispatchQueue.main.async {
+                    self.statusMessage = "Receiving data"
+                }
+            }
+        }
+    }
+    
+    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
+        guard characteristic.uuid == txCharacteristicUUID,
+              let data = characteristic.value else {
+            return
+        }
+        
+        parsePacket(data)
+    }
 }
