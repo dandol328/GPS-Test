@@ -50,7 +50,7 @@ class BLEManager: NSObject, ObservableObject {
         static let coordinateScale = 10_000_000.0
         static let altitudeScale = 1000.0  // mm to meters
         static let speedScale = 1000.0  // mm/s to m/s
-        static let headingScale = 1000000.0  // degrees * 1e-6
+        static let headingScale = 1_000_000.0  // degrees * 1e-6
         
         // Device name prefix for filtering
         static let deviceNamePrefix = "RaceBox"
