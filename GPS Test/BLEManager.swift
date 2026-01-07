@@ -33,12 +33,12 @@ class BLEManager: NSObject, ObservableObject {
         static let packetSize = 88
         
         // GPS data offsets in the packet
-        static let numSatellitesOffset = 23
-        static let longitudeOffset = 24
-        static let latitudeOffset = 28
-        static let altitudeOffset = 32
-        static let speedOffset = 48
-        static let headingOffset = 52
+        static let numSatellitesOffset = 5
+        static let longitudeOffset = 6
+        static let latitudeOffset = 10
+        static let altitudeOffset = 14
+        static let speedOffset = 18
+        static let headingOffset = 26
         static let accelerometerXOffset = 68
         static let accelerometerYOffset = 70
         static let accelerometerZOffset = 72
@@ -50,7 +50,7 @@ class BLEManager: NSObject, ObservableObject {
         static let coordinateScale = 10_000_000.0
         static let altitudeScale = 1000.0  // mm to meters
         static let speedScale = 1000.0  // mm/s to m/s
-        static let headingScale = 100_000.0  // degrees * 1e-5
+        static let headingScale = 1000000.0  // degrees * 1e-6
         
         // Device name prefix for filtering
         static let deviceNamePrefix = "RaceBox"
@@ -135,10 +135,6 @@ class BLEManager: NSObject, ObservableObject {
             return
         }
         
-        // Debug: Print received data
-        print("Received GPS data: \(bytes.count) bytes")
-        print("Hex dump: \(bytes.map { String(format: "%02x", $0) }.joined(separator: " "))")
-        
         // Extract number of satellites (1 byte, unsigned)
         let numSV = data.withUnsafeBytes { buffer in
             buffer.loadUnaligned(fromByteOffset: ProtocolConstants.numSatellitesOffset, as: UInt8.self)
@@ -191,25 +187,12 @@ class BLEManager: NSObject, ObservableObject {
             buffer.loadUnaligned(fromByteOffset: ProtocolConstants.gyroscopeZOffset, as: Int16.self)
         }
         
-        // Debug logging of raw values
-        print("Raw numSatellites: \(numSV)")
-        print("Raw longitude: \(longitudeRaw), latitude: \(latitudeRaw)")
-        print("Raw altitude: \(altitudeRaw) mm")
-        print("Raw speed: \(speedRaw) mm/s")
-        print("Raw heading: \(headingRaw) (degrees * 1e-5)")
-        print("Raw accel: X=\(accelX), Y=\(accelY), Z=\(accelZ) milli-g")
-        print("Raw gyro: X=\(gyroX), Y=\(gyroY), Z=\(gyroZ) centi-deg/s")
-        
         // Convert to appropriate units
         let newLongitude = Double(longitudeRaw) / ProtocolConstants.coordinateScale
         let newLatitude = Double(latitudeRaw) / ProtocolConstants.coordinateScale
         let newAltitude = Double(altitudeRaw) / ProtocolConstants.altitudeScale
         let newSpeed = Double(speedRaw) / ProtocolConstants.speedScale
         let newHeading = Double(headingRaw) / ProtocolConstants.headingScale
-        
-        // Debug converted values
-        print("Converted: altitude=\(newAltitude)m, speed=\(newSpeed)m/s, heading=\(newHeading)°")
-        print("---")
         
         // Update on main thread
         DispatchQueue.main.async {
