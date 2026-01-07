@@ -29,43 +29,59 @@ struct ContentView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
-            .padding(.bottom, 20)
+            .padding(.bottom, 10)
             
-            // GPS Data Display
-            VStack(spacing: 30) {
-                // Latitude
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Latitude")
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                    Text(String(format: coordinateFormat, bleManager.latitude))
-                        .font(.system(size: 32, weight: .medium, design: .monospaced))
-                        .foregroundColor(.primary)
+            ScrollView {
+                VStack(spacing: 20) {
+                    // GPS Position Section
+                    VStack(spacing: 12) {
+                        SectionHeader(title: "GPS Position")
+                        
+                        HStack(spacing: 12) {
+                            DataCard(label: "Latitude", value: String(format: coordinateFormat, bleManager.latitude))
+                            DataCard(label: "Longitude", value: String(format: coordinateFormat, bleManager.longitude))
+                        }
+                        
+                        HStack(spacing: 12) {
+                            DataCard(label: "Altitude", value: String(format: "%.1f m", bleManager.altitude))
+                            DataCard(label: "Satellites", value: "\(bleManager.numSatellites)")
+                        }
+                    }
+                    
+                    // GPS Motion Section
+                    VStack(spacing: 12) {
+                        SectionHeader(title: "Motion")
+                        
+                        HStack(spacing: 12) {
+                            DataCard(label: "Speed", value: String(format: "%.2f m/s", bleManager.speed))
+                            DataCard(label: "Heading", value: String(format: "%.1f°", bleManager.heading))
+                        }
+                    }
+                    
+                    // Accelerometer Section
+                    VStack(spacing: 12) {
+                        SectionHeader(title: "Accelerometer (milli-g)")
+                        
+                        HStack(spacing: 12) {
+                            DataCard(label: "X", value: String(format: "%.0f", bleManager.accelerometerX))
+                            DataCard(label: "Y", value: String(format: "%.0f", bleManager.accelerometerY))
+                            DataCard(label: "Z", value: String(format: "%.0f", bleManager.accelerometerZ))
+                        }
+                    }
+                    
+                    // Gyroscope Section
+                    VStack(spacing: 12) {
+                        SectionHeader(title: "Gyroscope (centi-deg/s)")
+                        
+                        HStack(spacing: 12) {
+                            DataCard(label: "X", value: String(format: "%.0f", bleManager.gyroscopeX))
+                            DataCard(label: "Y", value: String(format: "%.0f", bleManager.gyroscopeY))
+                            DataCard(label: "Z", value: String(format: "%.0f", bleManager.gyroscopeZ))
+                        }
+                    }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.systemGray6))
-                )
-                
-                // Longitude
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Longitude")
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                    Text(String(format: coordinateFormat, bleManager.longitude))
-                        .font(.system(size: 32, weight: .medium, design: .monospaced))
-                        .foregroundColor(.primary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.systemGray6))
-                )
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
             
             Spacer()
             
@@ -106,6 +122,43 @@ struct ContentView: View {
             .padding(.bottom, 30)
         }
         .padding()
+    }
+}
+
+// MARK: - Supporting Views
+
+struct SectionHeader: View {
+    let title: String
+    
+    var body: some View {
+        Text(title)
+            .font(.headline)
+            .foregroundColor(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+struct DataCard: View {
+    let label: String
+    let value: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            Text(value)
+                .font(.system(size: 18, weight: .medium, design: .monospaced))
+                .foregroundColor(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(.systemGray6))
+        )
     }
 }
 

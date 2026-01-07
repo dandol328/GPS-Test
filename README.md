@@ -1,13 +1,16 @@
 # GPS Test - RaceBox BLE GPS Display
 
-An iOS app built with Swift and SwiftUI that connects to an ESP32 RaceBox emulator via Bluetooth Low Energy (BLE) to display real-time GPS coordinates.
+An iOS app built with Swift and SwiftUI that connects to an ESP32 RaceBox emulator via Bluetooth Low Energy (BLE) to display real-time GPS coordinates, motion data, and IMU (accelerometer/gyroscope) readings.
 
 ## Features
 
 - **BLE Connection**: Automatically scans and connects to RaceBox Mini devices
 - **High-Frequency GPS**: Receives GPS data at 25 Hz refresh rate
-- **Real-time Display**: Shows latitude and longitude with 7 decimal precision
-- **Clean UI**: Modern SwiftUI interface with connection status indicator
+- **Comprehensive Data Display**: 
+  - GPS Position: Latitude, longitude (7 decimal precision), altitude, satellite count
+  - Motion: Speed (m/s) and heading (degrees)
+  - IMU Data: 3-axis accelerometer (milli-g) and gyroscope (centi-deg/s)
+- **Clean UI**: Modern SwiftUI interface with organized sections and connection status indicator
 - **Auto-reconnect**: Handles disconnections gracefully
 
 ## Requirements
@@ -35,8 +38,18 @@ The app parses the following fields from the 88-byte packet:
 | Header | 0-1 | uint16 | Frame start (0xB5 0x62) |
 | Message Class | 2 | uint8 | 0xFF for RaceBox Data Message |
 | Message ID | 3 | uint8 | 0x01 for live GPS data |
-| Longitude | 30-33 | int32 | Longitude in degrees × 10^7 |
-| Latitude | 34-37 | int32 | Latitude in degrees × 10^7 |
+| Num Satellites | 23 | uint8 | Number of satellites tracked |
+| Longitude | 24-27 | int32 | Longitude in degrees × 10^7 |
+| Latitude | 28-31 | int32 | Latitude in degrees × 10^7 |
+| Altitude | 32-35 | int32 | Height above ellipsoid in mm |
+| Speed | 48-51 | int32 | Ground speed in mm/s |
+| Heading | 52-55 | int32 | Heading of motion in degrees × 10^5 |
+| Accel X | 68-69 | int16 | X-axis acceleration in milli-g |
+| Accel Y | 70-71 | int16 | Y-axis acceleration in milli-g |
+| Accel Z | 72-73 | int16 | Z-axis acceleration in milli-g |
+| Gyro X | 74-75 | int16 | X-axis rotation rate in centi-deg/s |
+| Gyro Y | 76-77 | int16 | Y-axis rotation rate in centi-deg/s |
+| Gyro Z | 78-79 | int16 | Z-axis rotation rate in centi-deg/s |
 
 ## Usage
 
@@ -48,7 +61,11 @@ The app parses the following fields from the 88-byte packet:
    - The app will automatically scan for and connect to any device named "RaceBox Mini"
 
 3. **View GPS Data**:
-   - Once connected, latitude and longitude will update at 25 Hz
+   - Once connected, all GPS and IMU data will update at 25 Hz
+   - **GPS Position**: Latitude, longitude, altitude, and satellite count
+   - **Motion**: Current speed and heading
+   - **Accelerometer**: 3-axis acceleration data
+   - **Gyroscope**: 3-axis rotation rate data
    - The status indicator shows the connection state (green = connected, red = disconnected)
 
 4. **Disconnect**: Tap the "Disconnect" button to end the BLE connection
@@ -70,16 +87,19 @@ The `BLEManager` class handles all Bluetooth operations:
 - **Scanning**: Discovers RaceBox devices advertising the correct service UUID
 - **Connection**: Establishes and manages BLE connection
 - **Data Reception**: Subscribes to TX characteristic notifications
-- **Parsing**: Extracts latitude and longitude from the 88-byte packet
-- **State Management**: Publishes connection status and GPS coordinates to the UI
+- **Parsing**: Extracts GPS position, motion, and IMU data from the 88-byte packet
+- **State Management**: Publishes connection status and all sensor data to the UI
 
 ### ContentView.swift
 
 The SwiftUI view provides:
 
-- Real-time latitude/longitude display
+- Real-time display of GPS position (latitude, longitude, altitude, satellite count)
+- Motion data (speed, heading)
+- IMU data (accelerometer and gyroscope on all 3 axes)
 - Connection status indicator
 - Connect/Disconnect buttons
+- Scrollable, organized sections for easy data viewing
 - Responsive layout for iPhone and iPad
 
 ## Permissions
