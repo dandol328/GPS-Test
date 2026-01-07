@@ -4,9 +4,9 @@
 //
 //  Created by Dan on 1/6/26.
 //
-
+ 
 import SwiftUI
-
+ 
 struct ContentView: View {
     @StateObject private var bleManager = BLEManager()
     
@@ -79,16 +79,51 @@ struct ContentView: View {
                             DataCard(label: "Yaw (Z)", value: String(format: "%.2f °/s", bleManager.gyroscopeZ))
                         }
                     }
-                    
-                    // Connect/Disconnect buttons and other UI omitted for brevity...
                 }
                 .padding()
             }
+            
+            Spacer()
+            
+            // Control buttons
+            HStack(spacing: 20) {
+                if !bleManager.isConnected {
+                    Button(action: {
+                        bleManager.startScanning()
+                    }) {
+                        HStack {
+                            Image(systemName: "antenna.radiowaves.left.and.right")
+                            Text(bleManager.isScanning ? "Scanning..." : "Connect")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(bleManager.isScanning ? Color.gray : Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                    }
+                    .disabled(bleManager.isScanning)
+                } else {
+                    Button(action: {
+                        bleManager.disconnect()
+                    }) {
+                        HStack {
+                            Image(systemName: "xmark.circle")
+                            Text("Disconnect")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.red)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                    }
+                }
+            }
+            .padding(.horizontal)
         }
         .padding()
     }
 }
-
+ 
 struct SectionHeader: View {
     let title: String
     
@@ -98,7 +133,7 @@ struct SectionHeader: View {
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
-
+ 
 struct DataCard: View {
     let label: String
     let value: String
@@ -122,7 +157,7 @@ struct DataCard: View {
         )
     }
 }
-
+ 
 #Preview {
     ContentView()
 }
