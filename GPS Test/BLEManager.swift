@@ -73,6 +73,8 @@ class BLEManager: NSObject, ObservableObject {
     @Published var gyroscopeX: Double = 0.0
     @Published var gyroscopeY: Double = 0.0
     @Published var gyroscopeZ: Double = 0.0
+    @Published var isConnected: Bool = false
+    @Published var statusMessage: String = "Disconnected"
     
     // ... rest of class (parsing code unchanged aside from using the above constants)
     
