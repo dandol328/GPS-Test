@@ -3,11 +3,13 @@
 //  GPS Test
 //
 //  Created by Dan on 1/7/26.
-//
+//  
 
+ 
 import CoreBluetooth
 import Foundation
 
+ 
 class BLEManager: NSObject, ObservableObject {
     // Connection state enum for clearer state management
     private enum ConnectionState {
@@ -133,6 +135,10 @@ class BLEManager: NSObject, ObservableObject {
             return
         }
         
+        // Debug: Print received data
+        print("Received GPS data: \(bytes.count) bytes")
+        print("Hex dump: \(bytes.map { String(format: "%02x", $0) }.joined(separator: " "))")
+        
         // Extract number of satellites (1 byte, unsigned)
         let numSV = data.withUnsafeBytes { buffer in
             buffer.loadUnaligned(fromByteOffset: ProtocolConstants.numSatellitesOffset, as: UInt8.self)
@@ -185,12 +191,25 @@ class BLEManager: NSObject, ObservableObject {
             buffer.loadUnaligned(fromByteOffset: ProtocolConstants.gyroscopeZOffset, as: Int16.self)
         }
         
+        // Debug logging of raw values
+        print("Raw numSatellites: \(numSV)")
+        print("Raw longitude: \(longitudeRaw), latitude: \(latitudeRaw)")
+        print("Raw altitude: \(altitudeRaw) mm")
+        print("Raw speed: \(speedRaw) mm/s")
+        print("Raw heading: \(headingRaw) (degrees * 1e-5)")
+        print("Raw accel: X=\(accelX), Y=\(accelY), Z=\(accelZ) milli-g")
+        print("Raw gyro: X=\(gyroX), Y=\(gyroY), Z=\(gyroZ) centi-deg/s")
+        
         // Convert to appropriate units
         let newLongitude = Double(longitudeRaw) / ProtocolConstants.coordinateScale
         let newLatitude = Double(latitudeRaw) / ProtocolConstants.coordinateScale
         let newAltitude = Double(altitudeRaw) / ProtocolConstants.altitudeScale
         let newSpeed = Double(speedRaw) / ProtocolConstants.speedScale
         let newHeading = Double(headingRaw) / ProtocolConstants.headingScale
+        
+        // Debug converted values
+        print("Converted: altitude=\(newAltitude)m, speed=\(newSpeed)m/s, heading=\(newHeading)°")
+        print("---")
         
         // Update on main thread
         DispatchQueue.main.async {
@@ -209,7 +228,6 @@ class BLEManager: NSObject, ObservableObject {
         }
     }
 }
-
 // MARK: - CBCentralManagerDelegate
 extension BLEManager: CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
@@ -269,7 +287,6 @@ extension BLEManager: CBCentralManagerDelegate {
         isConnected = false
     }
 }
-
 // MARK: - CBPeripheralDelegate
 extension BLEManager: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
