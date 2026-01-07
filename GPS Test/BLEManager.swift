@@ -31,11 +31,25 @@ class BLEManager: NSObject, ObservableObject {
         static let packetSize = 88
         
         // GPS data offsets in the packet
-        static let longitudeOffset = 30
-        static let latitudeOffset = 34
+        static let numSatellitesOffset = 23
+        static let longitudeOffset = 24
+        static let latitudeOffset = 28
+        static let altitudeOffset = 32
+        static let altitudeMSLOffset = 36
+        static let speedOffset = 48
+        static let headingOffset = 52
+        static let accelerometerXOffset = 68
+        static let accelerometerYOffset = 70
+        static let accelerometerZOffset = 72
+        static let gyroscopeXOffset = 74
+        static let gyroscopeYOffset = 76
+        static let gyroscopeZOffset = 78
         
         // Conversion factor for GPS coordinates
         static let coordinateScale = 10_000_000.0
+        static let altitudeScale = 1000.0  // mm to meters
+        static let speedScale = 1000.0  // mm/s to m/s
+        static let headingScale = 100_000.0  // degrees * 1e-5
         
         // Device name prefix for filtering
         static let deviceNamePrefix = "RaceBox"
@@ -44,6 +58,16 @@ class BLEManager: NSObject, ObservableObject {
     // Published properties for UI updates
     @Published var latitude: Double = 0.0
     @Published var longitude: Double = 0.0
+    @Published var numSatellites: Int = 0
+    @Published var speed: Double = 0.0  // m/s
+    @Published var altitude: Double = 0.0  // meters
+    @Published var heading: Double = 0.0  // degrees
+    @Published var accelerometerX: Double = 0.0  // milli-g
+    @Published var accelerometerY: Double = 0.0  // milli-g
+    @Published var accelerometerZ: Double = 0.0  // milli-g
+    @Published var gyroscopeX: Double = 0.0  // centi-deg/s
+    @Published var gyroscopeY: Double = 0.0  // centi-deg/s
+    @Published var gyroscopeZ: Double = 0.0  // centi-deg/s
     @Published var isConnected: Bool = false
     @Published var isScanning: Bool = false
     @Published var statusMessage: String = "Ready to connect"
@@ -110,6 +134,11 @@ class BLEManager: NSObject, ObservableObject {
             return
         }
         
+        // Extract number of satellites (1 byte, unsigned)
+        let numSV = data.withUnsafeBytes { buffer in
+            buffer.loadUnaligned(fromByteOffset: ProtocolConstants.numSatellitesOffset, as: UInt8.self)
+        }
+        
         // Extract longitude (4 bytes, little-endian int32)
         let longitudeRaw = data.withUnsafeBytes { buffer in
             buffer.loadUnaligned(fromByteOffset: ProtocolConstants.longitudeOffset, as: Int32.self)
@@ -120,14 +149,64 @@ class BLEManager: NSObject, ObservableObject {
             buffer.loadUnaligned(fromByteOffset: ProtocolConstants.latitudeOffset, as: Int32.self)
         }
         
-        // Convert to degrees
+        // Extract altitude (4 bytes, little-endian int32, in mm)
+        let altitudeRaw = data.withUnsafeBytes { buffer in
+            buffer.loadUnaligned(fromByteOffset: ProtocolConstants.altitudeOffset, as: Int32.self)
+        }
+        
+        // Extract speed (4 bytes, little-endian int32, in mm/s)
+        let speedRaw = data.withUnsafeBytes { buffer in
+            buffer.loadUnaligned(fromByteOffset: ProtocolConstants.speedOffset, as: Int32.self)
+        }
+        
+        // Extract heading (4 bytes, little-endian int32, in degrees * 1e-5)
+        let headingRaw = data.withUnsafeBytes { buffer in
+            buffer.loadUnaligned(fromByteOffset: ProtocolConstants.headingOffset, as: Int32.self)
+        }
+        
+        // Extract accelerometer data (3 x 2 bytes, little-endian int16, in milli-g)
+        let accelX = data.withUnsafeBytes { buffer in
+            buffer.loadUnaligned(fromByteOffset: ProtocolConstants.accelerometerXOffset, as: Int16.self)
+        }
+        let accelY = data.withUnsafeBytes { buffer in
+            buffer.loadUnaligned(fromByteOffset: ProtocolConstants.accelerometerYOffset, as: Int16.self)
+        }
+        let accelZ = data.withUnsafeBytes { buffer in
+            buffer.loadUnaligned(fromByteOffset: ProtocolConstants.accelerometerZOffset, as: Int16.self)
+        }
+        
+        // Extract gyroscope data (3 x 2 bytes, little-endian int16, in centi-deg/s)
+        let gyroX = data.withUnsafeBytes { buffer in
+            buffer.loadUnaligned(fromByteOffset: ProtocolConstants.gyroscopeXOffset, as: Int16.self)
+        }
+        let gyroY = data.withUnsafeBytes { buffer in
+            buffer.loadUnaligned(fromByteOffset: ProtocolConstants.gyroscopeYOffset, as: Int16.self)
+        }
+        let gyroZ = data.withUnsafeBytes { buffer in
+            buffer.loadUnaligned(fromByteOffset: ProtocolConstants.gyroscopeZOffset, as: Int16.self)
+        }
+        
+        // Convert to appropriate units
         let newLongitude = Double(longitudeRaw) / ProtocolConstants.coordinateScale
         let newLatitude = Double(latitudeRaw) / ProtocolConstants.coordinateScale
+        let newAltitude = Double(altitudeRaw) / ProtocolConstants.altitudeScale
+        let newSpeed = Double(speedRaw) / ProtocolConstants.speedScale
+        let newHeading = Double(headingRaw) / ProtocolConstants.headingScale
         
         // Update on main thread
         DispatchQueue.main.async {
             self.longitude = newLongitude
             self.latitude = newLatitude
+            self.numSatellites = Int(numSV)
+            self.altitude = newAltitude
+            self.speed = newSpeed
+            self.heading = newHeading
+            self.accelerometerX = Double(accelX)
+            self.accelerometerY = Double(accelY)
+            self.accelerometerZ = Double(accelZ)
+            self.gyroscopeX = Double(gyroX)
+            self.gyroscopeY = Double(gyroY)
+            self.gyroscopeZ = Double(gyroZ)
         }
     }
 }
