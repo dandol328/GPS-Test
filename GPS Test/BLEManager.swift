@@ -33,6 +33,8 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         
         // GPS data absolute offsets in the full packet (payload offset + 6)
         // (payload offsets come from BluetoothProtocol.txt; payload starts at absolute index 6)
+        static let fixStatusOffset = 26       // payload 20 + 6
+        static let fixStatusFlagsOffset = 27  // payload 21 + 6
         static let numSatellitesOffset = 29   // payload 23 + 6
         static let longitudeOffset = 30       // payload 24 + 6
         static let latitudeOffset = 34        // payload 28 + 6
@@ -41,6 +43,10 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         // Motion offsets (absolute)
         static let speedOffset = 54           // payload 48 + 6
         static let headingOffset = 58         // payload 52 + 6
+        
+        // Additional GPS quality offsets
+        static let pdopOffset = 70            // payload 64 + 6
+        static let batteryStatusOffset = 73   // payload 67 + 6
         
         // IMU offsets (absolute)
         static let accelerometerXOffset = 74  // payload 68 + 6
@@ -55,6 +61,7 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         static let altitudeScale = 1000.0  // mm to meters
         static let speedScale = 1000.0  // mm/s to m/s
         static let headingScale = 100_000.0  // degrees * 1e5 (protocol uses factor 1e5)
+        static let pdopScale = 100.0  // PDOP with factor of 100
         
         // Device name prefix for filtering
         static let deviceNamePrefix = "RaceBox"
@@ -76,6 +83,19 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     @Published var isConnected: Bool = false
     @Published var isScanning: Bool = false
     @Published var statusMessage: String = "Disconnected"
+    
+    // Additional GPS quality metrics
+    @Published var fixStatus: Int = 0  // 0=no fix, 2=2D, 3=3D
+    @Published var fixStatusFlags: UInt8 = 0
+    @Published var pdop: Double = 0.0
+    @Published var batteryLevel: Int = 0  // 0-100%
+    @Published var isCharging: Bool = false
+    @Published var updateRate: Double = 0.0  // Hz
+    
+    // Data rate tracking
+    private var lastUpdateTime: Date?
+    private var updateIntervals: [TimeInterval] = []
+    private let maxIntervalSamples = 10
     
     // BLE properties
     private var centralManager: CBCentralManager!
@@ -130,6 +150,32 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     private func parsePacket(_ data: Data) {
         guard data.count >= ProtocolConstants.packetSize else { return }
         
+        // Track update rate
+        let now = Date()
+        if let lastTime = lastUpdateTime {
+            let interval = now.timeIntervalSince(lastTime)
+            updateIntervals.append(interval)
+            if updateIntervals.count > maxIntervalSamples {
+                updateIntervals.removeFirst()
+            }
+            if !updateIntervals.isEmpty {
+                let avgInterval = updateIntervals.reduce(0, +) / Double(updateIntervals.count)
+                let hz = avgInterval > 0 ? 1.0 / avgInterval : 0.0
+                DispatchQueue.main.async {
+                    self.updateRate = hz
+                }
+            }
+        }
+        lastUpdateTime = now
+        
+        let fixStat = data.withUnsafeBytes { buffer in
+            buffer.loadUnaligned(fromByteOffset: ProtocolConstants.fixStatusOffset, as: UInt8.self)
+        }
+        
+        let fixFlags = data.withUnsafeBytes { buffer in
+            buffer.loadUnaligned(fromByteOffset: ProtocolConstants.fixStatusFlagsOffset, as: UInt8.self)
+        }
+        
         let numSV = data.withUnsafeBytes { buffer in
             buffer.loadUnaligned(fromByteOffset: ProtocolConstants.numSatellitesOffset, as: UInt8.self)
         }
@@ -148,6 +194,14 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         }
         let headingRaw = data.withUnsafeBytes { buffer in
             buffer.loadUnaligned(fromByteOffset: ProtocolConstants.headingOffset, as: Int32.self)
+        }
+        
+        let pdopRaw = data.withUnsafeBytes { buffer in
+            buffer.loadUnaligned(fromByteOffset: ProtocolConstants.pdopOffset, as: UInt16.self)
+        }
+        
+        let batteryRaw = data.withUnsafeBytes { buffer in
+            buffer.loadUnaligned(fromByteOffset: ProtocolConstants.batteryStatusOffset, as: UInt8.self)
         }
         
         let accelX = data.withUnsafeBytes { buffer in
@@ -176,6 +230,11 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         let newAltitude = Double(altitudeRaw) / ProtocolConstants.altitudeScale
         let newSpeed = Double(speedRaw) / ProtocolConstants.speedScale
         let newHeading = Double(headingRaw) / ProtocolConstants.headingScale
+        let newPdop = Double(pdopRaw) / ProtocolConstants.pdopScale
+        
+        // Battery: MSB is charging status, lower 7 bits are percentage
+        let charging = (batteryRaw & 0x80) != 0
+        let batteryPercent = Int(batteryRaw & 0x7F)
         
         // Accelerometer: milli-g -> g
         let newAccelX = Double(accelX) / 1000.0
@@ -188,12 +247,17 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         let newGyroZ = Double(gyroZ) / 100.0
         
         DispatchQueue.main.async {
+            self.fixStatus = Int(fixStat)
+            self.fixStatusFlags = fixFlags
             self.longitude = newLongitude
             self.latitude = newLatitude
             self.numSatellites = Int(numSV)
             self.altitude = newAltitude
             self.speed = newSpeed
             self.heading = newHeading
+            self.pdop = newPdop
+            self.batteryLevel = batteryPercent
+            self.isCharging = charging
             self.accelerometerX = newAccelX
             self.accelerometerY = newAccelY
             self.accelerometerZ = newAccelZ
