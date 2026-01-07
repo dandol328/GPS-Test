@@ -248,6 +248,7 @@ struct MinMaxCard: View {
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(.systemGray6))
+                .shadow(color: Color.black.opacity(0.05), radius: 3, x: 0, y: 2)
         )
     }
 }
@@ -284,6 +285,7 @@ struct MinMaxRowCard: View {
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(.systemGray6))
+                .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
         )
     }
 }
@@ -338,6 +340,7 @@ struct SessionCard: View {
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(.systemGray6))
+                .shadow(color: Color.black.opacity(0.05), radius: 3, x: 0, y: 2)
         )
     }
 }

@@ -39,6 +39,7 @@ struct ContentView: View {
 struct DashboardView: View {
     @ObservedObject var bleManager: BLEManager
     @ObservedObject var settings: UserSettings
+    @State private var pulseAnimation = false
     
     // Format string for GPS coordinates (7 decimal places)
     private let coordinateFormat = "%.7f°"
@@ -77,6 +78,12 @@ struct DashboardView: View {
                             Circle()
                                 .fill(bleManager.isConnected ? Color.green : Color.red)
                                 .frame(width: 10, height: 10)
+                                .scaleEffect(pulseAnimation && bleManager.isConnected ? 1.2 : 1.0)
+                                .opacity(pulseAnimation && bleManager.isConnected ? 0.6 : 1.0)
+                                .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: pulseAnimation)
+                                .onAppear {
+                                    pulseAnimation = true
+                                }
                             Text(bleManager.statusMessage)
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
@@ -288,6 +295,7 @@ struct DataCard: View {
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(.systemGray6))
+                .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
         )
     }
 }

@@ -141,6 +141,7 @@ struct PerformanceTimingView: View {
                             .font(.title)
                             .fontWeight(.bold)
                             .foregroundColor(timer.isRunning ? .green : .secondary)
+                            .animation(.easeInOut(duration: 0.3), value: timer.isRunning)
                         
                         if timer.isRunning {
                             HStack(spacing: 20) {
@@ -170,7 +171,9 @@ struct PerformanceTimingView: View {
                             .background(
                                 RoundedRectangle(cornerRadius: 16)
                                     .fill(Color(.systemGray6))
+                                    .shadow(color: Color.black.opacity(0.05), radius: 3, x: 0, y: 2)
                             )
+                            .transition(.scale.combined(with: .opacity))
                         }
                     }
                     .padding()
@@ -360,6 +363,7 @@ struct PerformanceResultCard: View {
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(.systemGray6))
+                .shadow(color: Color.black.opacity(0.05), radius: 3, x: 0, y: 2)
         )
     }
 }
