@@ -10,6 +10,9 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var bleManager = BLEManager()
     
+    // Format string for GPS coordinates (7 decimal places)
+    private let coordinateFormat = "%.7f°"
+    
     var body: some View {
         VStack(spacing: 20) {
             // Header
@@ -35,7 +38,7 @@ struct ContentView: View {
                     Text("Latitude")
                         .font(.headline)
                         .foregroundColor(.secondary)
-                    Text(String(format: "%.7f°", bleManager.latitude))
+                    Text(String(format: coordinateFormat, bleManager.latitude))
                         .font(.system(size: 32, weight: .medium, design: .monospaced))
                         .foregroundColor(.primary)
                 }
@@ -51,7 +54,7 @@ struct ContentView: View {
                     Text("Longitude")
                         .font(.headline)
                         .foregroundColor(.secondary)
-                    Text(String(format: "%.7f°", bleManager.longitude))
+                    Text(String(format: coordinateFormat, bleManager.longitude))
                         .font(.system(size: 32, weight: .medium, design: .monospaced))
                         .foregroundColor(.primary)
                 }

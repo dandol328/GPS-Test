@@ -157,7 +157,8 @@ extension BLEManager: CBCentralManagerDelegate {
         
         // Filter devices by name: only connect to devices with RaceBox prefix
         // This ensures compatibility with RaceBox Mini and other RaceBox devices
-        // If multiple RaceBox devices are found, the first discovered device is selected
+        // NOTE: If multiple RaceBox devices are in range, this will connect to the first one discovered.
+        // Future enhancement: Consider implementing device selection UI or using RSSI to select strongest signal.
         if let name = peripheral.name, name.hasPrefix(ProtocolConstants.deviceNamePrefix) {
             connectionState = .connecting
             self.peripheral = peripheral
@@ -194,8 +195,8 @@ extension BLEManager: CBCentralManagerDelegate {
 // MARK: - CBPeripheralDelegate
 extension BLEManager: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
-        guard error == nil else {
-            statusMessage = "Error discovering services"
+        if let error = error {
+            statusMessage = "Error discovering services: \(error.localizedDescription)"
             return
         }
         
@@ -209,8 +210,8 @@ extension BLEManager: CBPeripheralDelegate {
     }
     
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
-        guard error == nil else {
-            statusMessage = "Error discovering characteristics"
+        if let error = error {
+            statusMessage = "Error discovering characteristics: \(error.localizedDescription)"
             return
         }
         
