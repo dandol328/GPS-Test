@@ -93,10 +93,15 @@ class PerformanceTimer: ObservableObject {
         
         // Check 0-60 (mph or kph depending on unit)
         if time0to60 == nil {
-            let targetSpeed = speedUnit == .milesPerHour ? 26.8224 : 16.6667  // 60 mph or 60 kph in m/s
+            let targetSpeed: Double
+            if speedUnit == .milesPerHour {
+                targetSpeed = 60.0  // 60 mph
+            } else {
+                targetSpeed = 60.0  // 60 kph (or m/s, knots - using 60 as threshold)
+            }
             let convertedSpeed = speedUnit.convert(speed)
             
-            if convertedSpeed >= 60.0 {
+            if convertedSpeed >= targetSpeed {
                 time0to60 = elapsed
             }
         }
