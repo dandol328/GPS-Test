@@ -52,7 +52,10 @@ class BLEManager: NSObject, ObservableObject {
     
     func stopScanning() {
         centralManager.stopScan()
-        connectionState = .disconnected
+        // Only update state to disconnected if we were actually scanning
+        if connectionState == .scanning {
+            connectionState = .disconnected
+        }
         isScanning = false
     }
     

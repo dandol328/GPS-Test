@@ -95,7 +95,7 @@ Users will be prompted to grant Bluetooth access when they first launch the app.
 
 **App doesn't find the RaceBox device:**
 - Ensure the ESP32 is powered on and advertising
-- Check that the device name starts with "RaceBox Mini"
+- Check that the device name starts with "RaceBox" (e.g., "RaceBox Mini", "RaceBox Pro")
 - Verify Bluetooth is enabled on your iPhone
 
 **Connection drops frequently:**
