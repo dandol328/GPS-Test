@@ -9,6 +9,14 @@ import CoreBluetooth
 import Foundation
 
 class BLEManager: NSObject, ObservableObject {
+    // Connection state enum for clearer state management
+    private enum ConnectionState {
+        case disconnected
+        case scanning
+        case connecting
+        case connected
+    }
+    
     // Published properties for UI updates
     @Published var latitude: Double = 0.0
     @Published var longitude: Double = 0.0
@@ -23,6 +31,7 @@ class BLEManager: NSObject, ObservableObject {
     private var centralManager: CBCentralManager!
     private var peripheral: CBPeripheral?
     private var txCharacteristic: CBCharacteristic?
+    private var connectionState: ConnectionState = .disconnected
     
     override init() {
         super.init()
@@ -35,6 +44,7 @@ class BLEManager: NSObject, ObservableObject {
             return
         }
         
+        connectionState = .scanning
         isScanning = true
         statusMessage = "Scanning for RaceBox..."
         centralManager.scanForPeripherals(withServices: [serviceUUID], options: nil)
@@ -42,6 +52,7 @@ class BLEManager: NSObject, ObservableObject {
     
     func stopScanning() {
         centralManager.stopScan()
+        connectionState = .disconnected
         isScanning = false
     }
     
@@ -53,11 +64,12 @@ class BLEManager: NSObject, ObservableObject {
     
     private func parseGPSData(_ data: Data) {
         // Ensure we have at least 88 bytes (RaceBox Data Message packet size)
+        // This validates that offsets 0-87 are safe to access
         guard data.count >= 88 else {
             return
         }
         
-        // Convert Data to byte array
+        // Convert Data to byte array for header validation
         let bytes = [UInt8](data)
         
         // Check for valid frame start (0xB5 0x62)
@@ -70,12 +82,14 @@ class BLEManager: NSObject, ObservableObject {
             return
         }
         
-        // Extract longitude (offset 30, 4 bytes, little-endian int32)
+        // Extract longitude (offset 30-33, 4 bytes, little-endian int32)
+        // Bounds already validated by 88-byte check above
         let longitudeRaw = data.withUnsafeBytes { buffer in
             buffer.loadUnaligned(fromByteOffset: 30, as: Int32.self)
         }
         
-        // Extract latitude (offset 34, 4 bytes, little-endian int32)
+        // Extract latitude (offset 34-37, 4 bytes, little-endian int32)
+        // Bounds already validated by 88-byte check above
         let latitudeRaw = data.withUnsafeBytes { buffer in
             buffer.loadUnaligned(fromByteOffset: 34, as: Int32.self)
         }
@@ -110,13 +124,16 @@ extension BLEManager: CBCentralManagerDelegate {
     }
     
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        // Prevent connecting to multiple devices or reconnecting if already connected/connecting
-        guard self.peripheral == nil, !isConnected else {
+        // Prevent race conditions: only connect if we're in scanning state
+        guard connectionState == .scanning else {
             return
         }
         
-        // Check if the device name starts with "RaceBox"
+        // Filter devices by name: only connect to devices starting with "RaceBox"
+        // This ensures compatibility with RaceBox Mini and other RaceBox devices
+        // If multiple RaceBox devices are found, the first discovered device is selected
         if let name = peripheral.name, name.hasPrefix("RaceBox") {
+            connectionState = .connecting
             self.peripheral = peripheral
             peripheral.delegate = self
             centralManager.stopScan()
@@ -127,12 +144,14 @@ extension BLEManager: CBCentralManagerDelegate {
     }
     
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        connectionState = .connected
         statusMessage = "Connected! Discovering services..."
         isConnected = true
         peripheral.discoverServices([serviceUUID])
     }
     
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
+        connectionState = .disconnected
         statusMessage = "Disconnected"
         isConnected = false
         self.peripheral = nil
@@ -140,6 +159,7 @@ extension BLEManager: CBCentralManagerDelegate {
     }
     
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
+        connectionState = .disconnected
         statusMessage = "Failed to connect"
         isConnected = false
     }
