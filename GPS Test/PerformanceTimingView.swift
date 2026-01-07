@@ -94,10 +94,15 @@ class PerformanceTimer: ObservableObject {
         // Check 0-60 (mph or kph depending on unit)
         if time0to60 == nil {
             let targetSpeed: Double
+            // Use 60 for mph and kph, equivalent values for other units
             if speedUnit == .milesPerHour {
                 targetSpeed = 60.0  // 60 mph
-            } else {
-                targetSpeed = 60.0  // 60 kph (or m/s, knots - using 60 as threshold)
+            } else if speedUnit == .kilometersPerHour {
+                targetSpeed = 60.0  // 60 kph (common benchmark)
+            } else if speedUnit == .metersPerSecond {
+                targetSpeed = 16.6667  // ~60 kph in m/s
+            } else {  // knots
+                targetSpeed = 32.4  // ~60 kph in knots
             }
             let convertedSpeed = speedUnit.convert(speed)
             
@@ -191,7 +196,9 @@ struct PerformanceTimingView: View {
                             .padding(.horizontal)
                         
                         PerformanceResultCard(
-                            title: "0-60 \(settings.speedUnit == .milesPerHour ? "mph" : "kph")",
+                            title: settings.speedUnit == .milesPerHour ? "0-60 mph" : 
+                                   settings.speedUnit == .kilometersPerHour ? "0-60 kph" :
+                                   settings.speedUnit == .knots ? "0-32 knots" : "0-60 kph",
                             time: timer.time0to60,
                             speed: nil,
                             bestTime: timer.best0to60,
