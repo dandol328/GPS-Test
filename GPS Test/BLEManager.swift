@@ -17,6 +17,30 @@ class BLEManager: NSObject, ObservableObject {
         case connected
     }
     
+    // RaceBox Protocol Constants
+    private struct ProtocolConstants {
+        // Frame start bytes (UBX-like protocol)
+        static let frameStartByte1: UInt8 = 0xB5
+        static let frameStartByte2: UInt8 = 0x62
+        
+        // Message identifiers for RaceBox Data Message
+        static let messageClass: UInt8 = 0xFF
+        static let messageId: UInt8 = 0x01
+        
+        // Packet size
+        static let packetSize = 88
+        
+        // GPS data offsets in the packet
+        static let longitudeOffset = 30
+        static let latitudeOffset = 34
+        
+        // Conversion factor for GPS coordinates
+        static let coordinateScale = 10_000_000.0
+        
+        // Device name prefix for filtering
+        static let deviceNamePrefix = "RaceBox"
+    }
+    
     // Published properties for UI updates
     @Published var latitude: Double = 0.0
     @Published var longitude: Double = 0.0
@@ -66,40 +90,39 @@ class BLEManager: NSObject, ObservableObject {
     }
     
     private func parseGPSData(_ data: Data) {
-        // Ensure we have at least 88 bytes (RaceBox Data Message packet size)
-        // This validates that offsets 0-87 are safe to access
-        guard data.count >= 88 else {
+        // Ensure we have the complete RaceBox Data Message packet
+        guard data.count >= ProtocolConstants.packetSize else {
             return
         }
         
         // Convert Data to byte array for header validation
         let bytes = [UInt8](data)
         
-        // Check for valid frame start (0xB5 0x62)
-        guard bytes[0] == 0xB5 && bytes[1] == 0x62 else {
+        // Check for valid frame start
+        guard bytes[0] == ProtocolConstants.frameStartByte1,
+              bytes[1] == ProtocolConstants.frameStartByte2 else {
             return
         }
         
-        // Check message class (0xFF) and message ID (0x01) for RaceBox Data Message
-        guard bytes[2] == 0xFF && bytes[3] == 0x01 else {
+        // Check message class and ID for RaceBox Data Message
+        guard bytes[2] == ProtocolConstants.messageClass,
+              bytes[3] == ProtocolConstants.messageId else {
             return
         }
         
-        // Extract longitude (offset 30-33, 4 bytes, little-endian int32)
-        // Bounds already validated by 88-byte check above
+        // Extract longitude (4 bytes, little-endian int32)
         let longitudeRaw = data.withUnsafeBytes { buffer in
-            buffer.loadUnaligned(fromByteOffset: 30, as: Int32.self)
+            buffer.loadUnaligned(fromByteOffset: ProtocolConstants.longitudeOffset, as: Int32.self)
         }
         
-        // Extract latitude (offset 34-37, 4 bytes, little-endian int32)
-        // Bounds already validated by 88-byte check above
+        // Extract latitude (4 bytes, little-endian int32)
         let latitudeRaw = data.withUnsafeBytes { buffer in
-            buffer.loadUnaligned(fromByteOffset: 34, as: Int32.self)
+            buffer.loadUnaligned(fromByteOffset: ProtocolConstants.latitudeOffset, as: Int32.self)
         }
         
-        // Convert to degrees (divide by 10^7)
-        let newLongitude = Double(longitudeRaw) / 10_000_000.0
-        let newLatitude = Double(latitudeRaw) / 10_000_000.0
+        // Convert to degrees
+        let newLongitude = Double(longitudeRaw) / ProtocolConstants.coordinateScale
+        let newLatitude = Double(latitudeRaw) / ProtocolConstants.coordinateScale
         
         // Update on main thread
         DispatchQueue.main.async {
@@ -132,10 +155,10 @@ extension BLEManager: CBCentralManagerDelegate {
             return
         }
         
-        // Filter devices by name: only connect to devices starting with "RaceBox"
+        // Filter devices by name: only connect to devices with RaceBox prefix
         // This ensures compatibility with RaceBox Mini and other RaceBox devices
         // If multiple RaceBox devices are found, the first discovered device is selected
-        if let name = peripheral.name, name.hasPrefix("RaceBox") {
+        if let name = peripheral.name, name.hasPrefix(ProtocolConstants.deviceNamePrefix) {
             connectionState = .connecting
             self.peripheral = peripheral
             peripheral.delegate = self
