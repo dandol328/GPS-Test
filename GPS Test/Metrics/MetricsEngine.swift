@@ -256,13 +256,13 @@ class MetricsEngine {
         // Calculate distances backward from start (if needed for braking metrics)
         if startIndex > 0 {
             for i in stride(from: startIndex - 1, through: 0, by: -1) {
-                let prev = samples[i + 1]
-                let curr = samples[i]
+                let nextSample = samples[i + 1]  // Sample after current (toward start)
+                let currentSample = samples[i]
                 let segmentDistance = haversineDistance(
-                    lat1: curr.latitude,
-                    lon1: curr.longitude,
-                    lat2: prev.latitude,
-                    lon2: prev.longitude
+                    lat1: currentSample.latitude,
+                    lon1: currentSample.longitude,
+                    lat2: nextSample.latitude,
+                    lon2: nextSample.longitude
                 )
                 distances[i] = distances[i + 1] - segmentDistance
             }
@@ -744,11 +744,16 @@ class MetricsEngine {
         // Calculate metrics
         let elapsedTime = brakingEndTimestamp.timeIntervalSince(brakingStartTimestamp)
         
-        // Calculate stopping distance (should be positive since we're slowing down)
+        // Calculate stopping distance (should be positive since we're moving forward while braking)
         // For braking, end distance should be greater than start distance
         let stoppingDistance = brakingEndDistance - brakingStartDistance
+        
+        // Validate stopping distance is non-negative
+        // Negative value would indicate calculation error or data corruption
         guard stoppingDistance >= 0 else {
-            // Invalid: end distance is before start distance
+            // This should not happen with valid GPS data - indicates a serious calculation error
+            // Could be caused by: incorrect cumulative distance calculation, corrupted samples,
+            // or samples not in chronological order
             return nil
         }
         
