@@ -62,6 +62,22 @@ enum MetricType: String, Codable, CaseIterable {
     var isBraking: Bool {
         self == .sixtyToZero
     }
+    
+    var displayOrder: Int {
+        switch self {
+        case .zeroToThirty: return 1
+        case .zeroToForty: return 2
+        case .zeroToSixty: return 3
+        case .zeroToEighty: return 4
+        case .zeroToHundred: return 5
+        case .thirtyToSeventy: return 6
+        case .fortyToHundred: return 7
+        case .sixtyFeet: return 8
+        case .eighthMile: return 9
+        case .quarterMile: return 10
+        case .sixtyToZero: return 11
+        }
+    }
 }
 
 /// Result of a performance metric calculation

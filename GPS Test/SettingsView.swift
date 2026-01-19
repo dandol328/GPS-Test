@@ -10,6 +10,8 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var bleManager: BLEManager
     @ObservedObject var settings: UserSettings
+    @ObservedObject var sessionManager: SessionManager
+    @State private var showingClearSessionsAlert = false
     
     var body: some View {
         NavigationView {
@@ -150,12 +152,43 @@ struct SettingsView: View {
                             .foregroundColor(.secondary)
                     }
                 }
+                
+                // MARK: - Session Storage Section
+                Section(header: Text("Session Storage"), 
+                       footer: Text("Stored sessions: \(sessionManager.sessions.count) / 50")) {
+                    HStack {
+                        Text("Total Sessions")
+                        Spacer()
+                        Text("\(sessionManager.sessions.count)")
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    if !sessionManager.sessions.isEmpty {
+                        Button(action: {
+                            showingClearSessionsAlert = true
+                        }) {
+                            HStack {
+                                Image(systemName: "trash")
+                                Text("Clear All Sessions")
+                            }
+                        }
+                        .foregroundColor(.red)
+                    }
+                }
             }
             .navigationTitle("Settings")
+            .alert("Clear All Sessions", isPresented: $showingClearSessionsAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Clear All", role: .destructive) {
+                    sessionManager.clearAllSessions()
+                }
+            } message: {
+                Text("Are you sure you want to delete all \(sessionManager.sessions.count) recorded sessions? This action cannot be undone.")
+            }
         }
     }
 }
 
 #Preview {
-    SettingsView(bleManager: BLEManager(), settings: UserSettings())
+    SettingsView(bleManager: BLEManager(), settings: UserSettings(), sessionManager: SessionManager())
 }
