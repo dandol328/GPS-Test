@@ -1,0 +1,25 @@
+# GPS Test Session Export
+# Session ID: 12345678-1234-1234-1234-123456789012
+# Session Name: Example Performance Run
+# Start Time: 2026-01-19T12:00:00Z
+# End Time: 2026-01-19T12:01:30Z
+# Sample Rate: 25 Hz
+# Total Samples: 2250
+# Duration: 90.0 seconds
+# Total Distance: 1250.5 meters
+# Max Speed: 45.2 m/s
+#
+# METRICS SUMMARY
+# 60ft: 2.456s @ 12.5 m/s (reliable)
+# 1/8 mile: 8.234s @ 35.8 m/s (reliable)
+# 1/4 mile: 12.567s @ 45.2 m/s (reliable)
+# 0-60 mph: 6.123s @ 26.8 m/s (reliable)
+# 30-70 mph: 4.234s @ 31.3 m/s (reliable)
+# 60-0 mph braking: 3.456s, stopping distance 46.2m (reliable)
+#
+timestamp,latitude,longitude,altitude,speed,heading,horizontalAccuracy,verticalAccuracy,speedAccuracy,fixType,satellites,pdop,hdop,vdop
+2026-01-19T12:00:00.000Z,37.123456,-122.123456,5.2,0.0,120.0,2.5,3.0,0.2,threeD,12,1.5,0.9,1.2
+2026-01-19T12:00:00.040Z,37.123456,-122.123455,5.2,0.5,120.1,2.5,3.0,0.2,threeD,12,1.5,0.9,1.2
+2026-01-19T12:00:00.080Z,37.123457,-122.123454,5.3,1.0,120.2,2.4,2.9,0.2,threeD,12,1.4,0.9,1.1
+2026-01-19T12:00:00.120Z,37.123457,-122.123453,5.3,1.5,120.3,2.4,2.9,0.2,threeD,12,1.4,0.9,1.1
+2026-01-19T12:00:00.160Z,37.123458,-122.123452,5.4,2.0,120.4,2.3,2.8,0.2,threeD,12,1.4,0.8,1.1

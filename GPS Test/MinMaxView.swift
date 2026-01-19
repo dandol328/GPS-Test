@@ -201,7 +201,7 @@ struct MinMaxView: View {
             }
             .navigationTitle("Min / Max")
             .onChange(of: bleManager.speed) { _ in
-                let calibratedG = settings.applyGForceCalibration(
+                let orientedG = settings.applyOrientationMapping(
                     x: bleManager.accelerometerX,
                     y: bleManager.accelerometerY,
                     z: bleManager.accelerometerZ
@@ -209,9 +209,9 @@ struct MinMaxView: View {
                 tracker.update(
                     speed: bleManager.speed,
                     altitude: bleManager.altitude,
-                    gx: calibratedG.x,
-                    gy: calibratedG.y,
-                    gz: calibratedG.z
+                    gx: orientedG.forward,
+                    gy: orientedG.right,
+                    gz: orientedG.up
                 )
             }
         }

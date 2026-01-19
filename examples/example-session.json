@@ -1,0 +1,54 @@
+{
+  "session": {
+    "id": "12345678-1234-1234-1234-123456789012",
+    "startTime": "2026-01-19T12:00:00Z",
+    "endTime": "2026-01-19T12:01:30Z",
+    "sampleRateHz": 25,
+    "name": "Example Performance Run",
+    "tags": ["test", "0-60", "quarter-mile"],
+    "notes": "Synthetic example session showing data structure"
+  },
+  "samples": [
+    {
+      "id": "sample-001",
+      "latitude": 37.123456,
+      "longitude": -122.123456,
+      "altitude": 5.2,
+      "timestamp": "2026-01-19T12:00:00Z",
+      "horizontalAccuracy": 2.5,
+      "verticalAccuracy": 3.0,
+      "speed": 0.0,
+      "speedAccuracy": 0.2,
+      "heading": 120.0,
+      "headingAccuracy": 5.0,
+      "fixType": "threeD",
+      "ageOfFix": 0.1,
+      "satellites": 12,
+      "hdop": 0.9,
+      "vdop": 1.2,
+      "pdop": 1.5
+    }
+  ],
+  "metrics": {
+    "sessionId": "12345678-1234-1234-1234-123456789012",
+    "computedAt": "2026-01-19T12:02:00Z",
+    "accuracyThreshold": 50.0,
+    "useFilteredData": false,
+    "results": [
+      {
+        "id": "metric-001",
+        "metricType": "60ft",
+        "elapsedTime": 2.456,
+        "startTimestamp": "2026-01-19T12:00:00Z",
+        "endTimestamp": "2026-01-19T12:00:02.456Z",
+        "trapSpeed": 12.5,
+        "peakSpeed": 12.5,
+        "distance": 18.288,
+        "startDistance": 0.0,
+        "avgHorizontalAccuracy": 2.4,
+        "sampleCount": 62,
+        "isReliable": true
+      }
+    ]
+  }
+}

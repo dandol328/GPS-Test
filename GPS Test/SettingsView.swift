@@ -103,6 +103,44 @@ struct SettingsView: View {
                     .foregroundColor(.orange)
                 }
                 
+                // MARK: - Orientation Section
+                Section(header: Text("Accelerometer Orientation"), 
+                       footer: Text(settings.orientationStatus)) {
+                    Button(action: {
+                        settings.detectOrientation(
+                            x: bleManager.accelerometerX,
+                            y: bleManager.accelerometerY,
+                            z: bleManager.accelerometerZ,
+                            speed: bleManager.speed
+                        )
+                    }) {
+                        HStack {
+                            Image(systemName: "arrow.up.forward")
+                            Text("Detect Orientation")
+                        }
+                    }
+                    .disabled(!bleManager.isConnected || bleManager.speed < 2.0)
+                    
+                    Button(action: {
+                        settings.resetOrientation()
+                    }) {
+                        HStack {
+                            Image(systemName: "arrow.counterclockwise")
+                            Text("Reset to Default (X Forward)")
+                        }
+                    }
+                    .foregroundColor(.orange)
+                    
+                    if settings.accelOrientationDetected {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                            Text("Orientation Detected")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                
                 // MARK: - About Section
                 Section(header: Text("About")) {
                     HStack {
