@@ -225,7 +225,346 @@ This project is independent and open-source. It is compatible with the RaceBox M
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+## Enhanced Data Model
+
+The app uses a comprehensive `LocationSample` data structure to capture all GNSS and accuracy information:
+
+### LocationSample Fields
+
+```json
+{
+  "id": "uuid",
+  "latitude": 37.123456,
+  "longitude": -122.123456,
+  "altitude": 5.2,
+  "timestamp": "2026-01-19T12:00:00Z",
+  "horizontalAccuracy": 2.5,
+  "verticalAccuracy": 3.0,
+  "speed": 12.5,
+  "speedAccuracy": 0.2,
+  "heading": 120.0,
+  "headingAccuracy": 5.0,
+  "fixType": "threeD",
+  "ageOfFix": 0.1,
+  "satellites": 12,
+  "hdop": 0.9,
+  "vdop": 1.2,
+  "pdop": 1.5
+}
+```
+
+**Core Position Data:**
+- `latitude`, `longitude`: Position in decimal degrees (7 decimal precision)
+- `altitude`: Height above ellipsoid in meters
+- `timestamp`: ISO 8601 timestamp with millisecond precision
+
+**Accuracy Metrics:**
+- `horizontalAccuracy`: GPS horizontal accuracy in meters
+- `verticalAccuracy`: GPS vertical accuracy in meters
+- `speedAccuracy`: Speed measurement accuracy in m/s
+- `headingAccuracy`: Heading measurement accuracy in degrees
+
+**Motion Data:**
+- `speed`: Ground speed in m/s
+- `heading`: Direction of motion (0-360 degrees, 0 = North)
+
+**GNSS Quality Indicators:**
+- `fixType`: Fix quality enum - `noFix`, `twoD`, `threeD`, `dgps`, `rtk`, `unknown`
+- `satellites`: Number of satellites tracked
+- `hdop`: Horizontal Dilution of Precision (lower is better, <2 excellent)
+- `vdop`: Vertical Dilution of Precision
+- `pdop`: Position Dilution of Precision (3D accuracy, <2 excellent)
+- `ageOfFix`: Time in seconds since last fix update
+
+## Session Recording
+
+The app supports high-frequency GPS session recording with full data capture:
+
+**Recording Features:**
+- **Sample Rate**: Configurable 1-25 Hz (default: 25 Hz max for RaceBox)
+- **Data Storage**: All LocationSample fields captured with full precision
+- **Session Metadata**: UUID, name, tags, notes, start/end times
+- **Automatic Persistence**: Sessions saved to local storage
+- **Export Formats**: JSON, CSV, GPX, KML
+
+**RecordingSession Structure:**
+```swift
+{
+  "id": "uuid",
+  "startTime": "ISO 8601 timestamp",
+  "endTime": "ISO 8601 timestamp",
+  "sampleRateHz": 25,
+  "name": "Session name",
+  "tags": ["tag1", "tag2"],
+  "notes": "Session notes"
+}
+```
+
+## Comprehensive Performance Metrics
+
+The app calculates **11 different performance metrics** automatically from recorded sessions:
+
+### Distance-Based Metrics
+- **60 Feet** (18.288m): Quarter-mile tree to 60ft mark - ET and trap speed
+- **1/8 Mile** (201.168m): Eighth-mile drag racing - ET and trap speed  
+- **1/4 Mile** (402.336m): Quarter-mile drag racing - ET and trap speed
+
+### Speed-Based Acceleration Metrics
+- **0-30 mph**: Elapsed time and distance to reach 30 mph
+- **0-40 mph**: Elapsed time and distance to reach 40 mph
+- **0-60 mph**: Elapsed time and distance to reach 60 mph
+- **0-80 mph**: Elapsed time and distance to reach 80 mph
+- **0-100 mph**: Elapsed time and distance to reach 100 mph
+
+### Rolling Speed Intervals
+- **30-70 mph**: Passing acceleration time and distance
+- **40-100 mph**: Highway passing acceleration time and distance
+
+### Braking Metrics
+- **60-0 mph**: Braking time and **stopping distance** from 60 mph to full stop
+
+### Metric Data Fields
+
+Each metric includes:
+- `elapsedTime`: Time to complete metric (seconds)
+- `trapSpeed`: Speed at end of metric (m/s) - for distance-based and speed-based
+- `peakSpeed`: Maximum speed achieved during metric (m/s)
+- `distance`: Total distance traveled during metric (meters)
+- `startDistance`: Cumulative distance at metric start (meters)
+- `startTimestamp`: When metric started
+- `endTimestamp`: When metric completed/threshold reached
+- `avgHorizontalAccuracy`: Average GPS accuracy during metric (meters)
+- `sampleCount`: Number of GPS samples used in calculation
+- `isReliable`: Boolean indicator based on accuracy threshold (default: 50m)
+
+## Metric Calculation Algorithm
+
+The app uses advanced algorithms for accurate performance measurement:
+
+### Distance Calculation
+- **Haversine Formula**: Calculates great-circle distance between GPS coordinates
+- Accounts for Earth's curvature (WGS84 ellipsoid)
+- Accurate for distances from centimeters to thousands of kilometers
+- Cumulative distance tracking throughout session
+
+### Threshold Detection
+- **Linear Interpolation**: Precise detection of exact moment thresholds are crossed
+- Interpolates between GPS samples for sub-sample precision
+- Example: If sample at 59.5 mph and next at 60.5 mph, calculates exact 60 mph timestamp
+- Applied to both speed and distance thresholds
+
+### Start Detection
+- Automatic motion detection at **2 mph (0.894 m/s) threshold**
+- Filters out GPS drift and stationary noise
+- Metrics begin from first movement above threshold
+
+### Data Quality Indicators
+- **Accuracy Threshold**: Default 50 meters horizontal accuracy
+- Samples exceeding threshold flagged in metrics
+- `isReliable` flag set based on average accuracy
+- `avgHorizontalAccuracy` reported for transparency
+- Higher sample rates (25 Hz) improve interpolation accuracy
+
+## Data Export
+
+Sessions can be exported in multiple industry-standard formats:
+
+### JSON Export
+- Complete session data with all fields
+- Includes samples array with full LocationSample objects
+- MetricsSummary with all calculated metrics
+- Human-readable and machine-parseable
+- See `examples/example-session.json`
+
+### CSV Export
+- Header with session metadata and metrics summary
+- One row per GPS sample
+- Columns: timestamp, lat/lon, altitude, speed, heading, all accuracy fields
+- Compatible with Excel, Google Sheets, data analysis tools
+- See `examples/example-session.csv`
+
+### GPX Export
+- Standard GPS Exchange Format (GPX 1.1)
+- Compatible with mapping software (Google Earth, Basecamp, Strava)
+- Track points include elevation, speed, timestamp
+- Extensions for accuracy data
+
+### KML Export
+- Google Earth visualization format
+- Track displayed as path with placemarks
+- Color-coded by speed or accuracy
+- Session metadata in description
+
+**Export Location**: All formats available in `examples/` directory
+
+## Accelerometer Orientation Detection
+
+The app features intelligent accelerometer orientation detection for accurate G-force measurement:
+
+### Auto-Detection
+- **Automatic Axis Detection**: Identifies which accelerometer axis points forward during acceleration
+- **Trigger**: Detect orientation while accelerating (speed > 2 mph / 0.894 m/s)
+- **Supported Mountings**: Works with any device mounting position
+- **Axis Mapping**: Maps device X/Y/Z axes to vehicle Forward/Right/Up axes
+
+### Manual Control
+- **Reset to Default**: Return to standard orientation (X=forward, Y=right, Z=up)
+- **Status Display**: Shows current detected orientation mapping
+- **Persistent**: Orientation saved in user settings
+
+### How It Works
+1. During acceleration, call "Detect Orientation" in Settings
+2. App analyzes X, Y, Z accelerometer readings
+3. Identifies axis with strongest forward acceleration
+4. Determines sign (positive/negative) of forward direction
+5. Maps remaining axes using right-hand rule
+6. All subsequent G-force displays use vehicle-relative axes
+
+**Benefits:**
+- Mount device in any position (portrait, landscape, upside-down)
+- Accurate forward/lateral/vertical G-force display
+- No manual configuration needed
+
+## Configuration Options
+
+The app provides configurable parameters for customization:
+
+### Sample Rate
+- **Range**: 1-25 Hz
+- **Default**: 25 Hz (maximum supported by RaceBox)
+- **Use Cases**: Lower rates save storage, higher rates improve interpolation accuracy
+
+### Accuracy Threshold
+- **Default**: 50 meters horizontal accuracy
+- **Purpose**: Filter unreliable GPS data
+- **Effect**: Sets `isReliable` flag on metrics
+
+### Unit Conversions
+
+**Speed Units:**
+- Meters per second (m/s)
+- Kilometers per hour (kph)
+- Miles per hour (mph)
+- Knots (kt)
+
+**Altitude Units:**
+- Meters (m)
+- Feet (ft)
+
+**Settings Persistence**: All preferences automatically saved via `@AppStorage`
+
+## JSON Schema Example
+
+Complete LocationSample structure in exported JSON:
+
+```json
+{
+  "session": {
+    "id": "12345678-1234-1234-1234-123456789012",
+    "startTime": "2026-01-19T12:00:00Z",
+    "endTime": "2026-01-19T12:01:30Z",
+    "sampleRateHz": 25,
+    "name": "Example Performance Run",
+    "tags": ["test", "0-60", "quarter-mile"],
+    "notes": "Synthetic example session"
+  },
+  "samples": [
+    {
+      "id": "sample-001",
+      "latitude": 37.123456,
+      "longitude": -122.123456,
+      "altitude": 5.2,
+      "timestamp": "2026-01-19T12:00:00Z",
+      "horizontalAccuracy": 2.5,
+      "verticalAccuracy": 3.0,
+      "speed": 0.0,
+      "speedAccuracy": 0.2,
+      "heading": 120.0,
+      "headingAccuracy": 5.0,
+      "fixType": "threeD",
+      "ageOfFix": 0.1,
+      "satellites": 12,
+      "hdop": 0.9,
+      "vdop": 1.2,
+      "pdop": 1.5
+    }
+  ],
+  "metrics": {
+    "sessionId": "12345678-1234-1234-1234-123456789012",
+    "computedAt": "2026-01-19T12:02:00Z",
+    "accuracyThreshold": 50.0,
+    "useFilteredData": false,
+    "results": [
+      {
+        "id": "metric-001",
+        "metricType": "60ft",
+        "elapsedTime": 2.456,
+        "startTimestamp": "2026-01-19T12:00:00Z",
+        "endTimestamp": "2026-01-19T12:00:02.456Z",
+        "trapSpeed": 12.5,
+        "peakSpeed": 12.5,
+        "distance": 18.288,
+        "startDistance": 0.0,
+        "avgHorizontalAccuracy": 2.4,
+        "sampleCount": 62,
+        "isReliable": true
+      }
+    ]
+  }
+}
+```
+
+## Usage Examples
+
+### Start/Stop Recording Sessions
+
+1. **Navigate to Recording View**
+2. **Tap "Start Recording"** - begins capturing GPS samples at configured rate
+3. **Perform your run** - acceleration, braking, circuit lap, etc.
+4. **Tap "Stop Recording"** - ends session and saves to storage
+5. **Add metadata** - name, tags, notes (optional)
+
+### Export Session Data
+
+1. **Select a saved session** from session list
+2. **Tap "Export"** button
+3. **Choose format**: JSON, CSV, GPX, or KML
+4. **Share** via AirDrop, email, Files app, or other apps
+
+### Detect Accelerometer Orientation
+
+1. **Go to Settings tab**
+2. **Find "Accelerometer Orientation" section**
+3. **During forward acceleration** (>2 mph):
+   - Tap "Detect Orientation" button
+   - App analyzes current G-forces
+   - Displays detected mapping
+4. **Status shows**: "Detected: Forward=+X, Right=+Y, Up=+Z" (or your configuration)
+5. **To reset**: Tap "Reset to Default Orientation"
+
+### View Metrics for a Session
+
+1. **Open a saved session** from session list
+2. **View Metrics Summary**:
+   - Distance-based: 60ft, 1/8 mile, 1/4 mile times
+   - Speed-based: 0-30, 0-60, 0-100 mph times
+   - Rolling: 30-70, 40-100 mph times
+   - Braking: 60-0 mph time and distance
+3. **Check reliability**: Green checkmark = reliable, amber = low accuracy
+4. **Details include**: ET, trap speed, distance, accuracy, sample count
+
 ## Changelog
+
+### Version 2.0.0
+- Added comprehensive LocationSample data model with all GNSS accuracy fields
+- Added session recording with configurable 1-25 Hz sample rate
+- Added 11 performance metrics (60ft, 1/8mi, 1/4mi, 0-30/40/60/80/100, 30-70, 40-100, 60-0)
+- Added Haversine distance calculation with linear interpolation
+- Added data export in JSON, CSV, GPX, and KML formats
+- Added accelerometer orientation auto-detection for any mounting position
+- Added accuracy threshold configuration (default 50m)
+- Added reliability indicators on all metrics
+- Added example export files in examples/ directory
 
 ### Version 1.1.0
 - Added Min/Max tracking with session saving

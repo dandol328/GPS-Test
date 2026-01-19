@@ -190,7 +190,7 @@ struct DashboardView: View {
                     VStack(spacing: 12) {
                         SectionHeader(title: "Accelerometer (g)", icon: "gyroscope")
                         
-                        let calibratedG = settings.applyGForceCalibration(
+                        let orientedG = settings.applyOrientationMapping(
                             x: bleManager.accelerometerX,
                             y: bleManager.accelerometerY,
                             z: bleManager.accelerometerZ
@@ -198,18 +198,18 @@ struct DashboardView: View {
                         
                         HStack(spacing: 12) {
                             DataCard(
-                                label: "Forward/Back (X)",
-                                value: String(format: "%.3f g", calibratedG.x),
+                                label: "Forward/Back",
+                                value: String(format: "%.3f g", orientedG.forward),
                                 icon: "arrow.left.and.right"
                             )
                             DataCard(
-                                label: "Left/Right (Y)",
-                                value: String(format: "%.3f g", calibratedG.y),
+                                label: "Left/Right",
+                                value: String(format: "%.3f g", orientedG.right),
                                 icon: "arrow.up.and.down"
                             )
                             DataCard(
-                                label: "Up/Down (Z)",
-                                value: String(format: "%.3f g", calibratedG.z),
+                                label: "Up/Down",
+                                value: String(format: "%.3f g", orientedG.up),
                                 icon: "arrow.up.arrow.down"
                             )
                         }
