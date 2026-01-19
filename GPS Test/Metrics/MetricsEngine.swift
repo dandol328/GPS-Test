@@ -740,7 +740,14 @@ class MetricsEngine {
         
         // Calculate metrics
         let elapsedTime = brakingEndTimestamp.timeIntervalSince(brakingStartTimestamp)
-        let stoppingDistance = abs(brakingEndDistance - brakingStartDistance)
+        
+        // Calculate stopping distance (should be positive since we're slowing down)
+        // For braking, end distance should be greater than start distance
+        let stoppingDistance = brakingEndDistance - brakingStartDistance
+        guard stoppingDistance >= 0 else {
+            // Invalid: end distance is before start distance
+            return nil
+        }
         
         // For braking, peak speed is the start speed
         let peakSpeed = samples[startIdx...endIdx].map { $0.speed }.max() ?? startSpeed

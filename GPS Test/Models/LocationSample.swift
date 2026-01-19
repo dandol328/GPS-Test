@@ -91,6 +91,8 @@ struct LocationSample: Codable, Identifiable {
         // Estimate horizontal accuracy from PDOP
         // Rule of thumb: horizontalAccuracy ≈ PDOP * 5 meters for consumer GPS
         // Better PDOP (lower value) = better accuracy
+        // NOTE: This is a rough estimation specific to BLE data conversion.
+        // Actual accuracy varies significantly by GPS receiver and environmental conditions.
         let estimatedHorizontalAccuracy: Double
         if pdop > 0 {
             estimatedHorizontalAccuracy = pdop * 5.0

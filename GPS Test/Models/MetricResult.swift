@@ -79,7 +79,12 @@ struct MetricResult: Codable, Identifiable {
     let peakSpeed: Double?              // m/s - maximum speed during metric
     
     // Distance data
-    let distance: Double                // meters - distance when threshold was reached
+    // NOTE: The interpretation of 'distance' varies by metric type:
+    // - Distance-based metrics (60ft, 1/8mi, 1/4mi): cumulative distance from start
+    // - Speed-based metrics (0-30, 0-60, etc.): cumulative distance when speed threshold reached
+    // - Rolling intervals (30-70, 40-100): cumulative distance at end speed
+    // - Braking metrics (60-0): stopping distance (distance traveled during braking)
+    let distance: Double                // meters - context-dependent (see note above)
     let startDistance: Double           // meters - distance at metric start
     
     // Quality indicators
