@@ -16,6 +16,10 @@ An iOS app built with Swift and SwiftUI that connects to an ESP32 RaceBox emulat
 - **IMU Data**: 3-axis accelerometer (g-force) and gyroscope (rotation rate) with calibration support
 - **Battery Status**: Real-time battery level and charging status
 - **Real-time Updates**: Live data refresh rate indicator
+- **Recording Indicator**: Shows when recording active with live stats
+  - Pulsing red dot when recording
+  - Sample count, duration, and distance
+  - Quick stop button
 
 ### Min/Max Tracking
 - **Track Peak Values**: Monitor maximum speed, altitude range, and G-forces
@@ -24,11 +28,26 @@ An iOS app built with Swift and SwiftUI that connects to an ESP32 RaceBox emulat
 - **Acceleration/Deceleration**: Monitor peak forward and braking forces
 
 ### Performance Timing
-- **0-60 Timer**: Measure 0-60 mph or kph acceleration time
-- **1/8 Mile**: Time and trap speed for 1/8 mile runs
-- **1/4 Mile**: Time and trap speed for 1/4 mile runs
-- **Best Times**: Automatically save and display personal best times
-- **Real-time Monitoring**: Live speed and distance tracking during runs
+- **All 11 Metrics**: Display complete performance analysis
+  - Distance: 60ft, 1/8 mile, 1/4 mile  
+  - Acceleration: 0-30, 0-40, 0-60, 0-80, 0-100 mph
+  - Rolling: 30-70, 40-100 mph
+  - Braking: 60-0 mph
+- **Session Recording**: Start/stop recording for automatic metric calculation
+- **Reliability Indicators**: Shows accuracy warnings for unreliable data
+- **Auto-compute**: Metrics calculated immediately upon stopping recording
+- **Real-time Monitoring**: Live speed, distance, and sample count during recording
+
+### Session Management
+- **Dedicated Sessions Tab**: View and manage all recorded sessions
+- **Session List**: Shows date, duration, sample count, distance, and max speed
+- **Session Detail View**: 
+  - Complete session metadata
+  - Compute and view all 11 performance metrics
+  - Reliability indicators for each metric
+  - Export functionality
+- **Swipe to Delete**: Easily remove individual sessions
+- **Storage Management**: View count and clear all sessions with confirmation
 
 ### Settings
 - **Connection Management**: Connect/disconnect from RaceBox device
@@ -38,6 +57,11 @@ An iOS app built with Swift and SwiftUI that connects to an ESP32 RaceBox emulat
   - Zero G-force sensors while stationary
   - Zero gyroscope for drift compensation
   - Reset calibration to defaults
+- **Accelerometer Orientation**: Auto-detect device mounting position
+- **Recording Settings**:
+  - Sample rate display (25 Hz from RaceBox)
+  - Accuracy threshold slider (10-100m)
+- **Session Storage**: View session count and clear all with confirmation
 - **Settings Persistence**: All preferences saved automatically
 
 ### UI/UX
@@ -101,8 +125,9 @@ The app parses the following fields from the 88-byte packet:
 3. **View Data**:
    - **Dashboard Tab**: View all real-time GPS and sensor data
    - **Min/Max Tab**: Track and save peak performance values
-   - **Timing Tab**: Perform acceleration and distance timing runs
-   - **Settings Tab**: Configure units and calibrate sensors
+   - **Timing Tab**: Start recording sessions and view all 11 performance metrics
+   - **Sessions Tab**: View, manage, and export all recorded sessions
+   - **Settings Tab**: Configure units, calibrate sensors, manage storage
 
 4. **Configure Units**:
    - Go to Settings tab
@@ -124,10 +149,20 @@ The app parses the following fields from the 88-byte packet:
 7. **Performance Timing**:
    - Navigate to Timing tab
    - Ensure GPS has a good fix (3D)
-   - Tap "Start" when ready
-   - Accelerate from standstill
-   - Times are automatically recorded and displayed
-   - Best times are saved and highlighted
+   - Tap "Start Recording" when ready
+   - Perform your run (acceleration, braking, etc.)
+   - Tap "Stop Recording" to end session
+   - Metrics are automatically calculated and displayed
+   - Session is saved to Sessions tab for later review
+
+8. **Manage Sessions**:
+   - Navigate to Sessions tab
+   - View all recorded sessions with metadata
+   - Tap a session to view details
+   - Compute metrics on-demand
+   - Export in JSON, CSV, GPX, or KML format
+   - Swipe left to delete individual sessions
+   - Use menu to clear all sessions
 
 ## Code Structure
 
@@ -139,7 +174,24 @@ GPS Test/
 ├── UserSettings.swift          # Settings persistence and unit conversions
 ├── SettingsView.swift          # Settings interface
 ├── MinMaxView.swift            # Min/Max tracking interface
-├── PerformanceTimingView.swift # Performance timing interface
+├── PerformanceTimingView.swift # Performance timing and recording interface
+├── SessionsView.swift          # Session list view
+├── SessionDetailView.swift     # Session detail and export view
+├── Models/                     # Data models
+│   ├── LocationSample.swift
+│   ├── RecordingSession.swift
+│   ├── FixType.swift
+│   └── MetricResult.swift
+├── Managers/                   # Business logic
+│   └── SessionManager.swift
+├── Metrics/                    # Performance calculations
+│   └── MetricsEngine.swift
+├── Export/                     # Export formats
+│   ├── SessionExporter.swift
+│   ├── JSONExportFormat.swift
+│   ├── CSVExporter.swift
+│   ├── GPXExporter.swift
+│   └── KMLExporter.swift
 └── Assets.xcassets/            # App assets
 ```
 
@@ -554,6 +606,29 @@ Complete LocationSample structure in exported JSON:
 4. **Details include**: ET, trap speed, distance, accuracy, sample count
 
 ## Changelog
+
+### Version 2.1.0 - Full Integration Complete ✅
+- **Session Management Tab**: Added dedicated Sessions tab for viewing all recorded sessions
+- **Enhanced Session Detail View**: View comprehensive session metadata and compute all 11 metrics
+- **Improved Export UI**: Polished export interface with individual format buttons and batch export
+- **Recording Indicator**: Live recording indicator on Dashboard showing sample count, duration, and distance
+- **Quick Stop**: Added quick stop button to recording indicator
+- **Configurable Settings**: 
+  - Accuracy threshold slider (10-100m) for metric reliability
+  - Sample rate display (25 Hz from RaceBox)
+  - Session storage management with count display
+  - Clear all sessions with confirmation
+- **Error Handling**: User-facing alerts for export failures
+- **Updated PerformanceTimingView**: 
+  - Removed old PerformanceTimer class
+  - Now uses SessionManager for recording
+  - Displays all 11 metrics with reliability indicators
+  - Auto-computes metrics on stop
+- **Code Quality**: 
+  - No hard-coded values - all configurable via settings
+  - Proper error handling throughout
+  - Thread-safe metric computation
+  - Memory-safe with no retain cycles
 
 ### Version 2.0.0
 - Added comprehensive LocationSample data model with all GNSS accuracy fields

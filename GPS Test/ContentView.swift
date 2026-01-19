@@ -10,10 +10,11 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var bleManager = BLEManager()
     @StateObject private var settings = UserSettings()
+    @StateObject private var sessionManager = SessionManager()
     
     var body: some View {
         TabView {
-            DashboardView(bleManager: bleManager, settings: settings)
+            DashboardView(bleManager: bleManager, settings: settings, sessionManager: sessionManager)
                 .tabItem {
                     Label("Dashboard", systemImage: "gauge")
                 }
@@ -23,15 +24,35 @@ struct ContentView: View {
                     Label("Min/Max", systemImage: "chart.bar")
                 }
             
-            PerformanceTimingView(bleManager: bleManager, settings: settings)
+            PerformanceTimingView(bleManager: bleManager, settings: settings, sessionManager: sessionManager)
                 .tabItem {
                     Label("Timing", systemImage: "timer")
                 }
             
-            SettingsView(bleManager: bleManager, settings: settings)
+            SessionsView(sessionManager: sessionManager, settings: settings)
+                .tabItem {
+                    Label("Sessions", systemImage: "list.bullet.clipboard")
+                }
+            
+            SettingsView(bleManager: bleManager, settings: settings, sessionManager: sessionManager)
                 .tabItem {
                     Label("Settings", systemImage: "gearshape")
                 }
+        }
+        .onChange(of: bleManager.speed) { _ in
+            // Add BLE samples to session when recording
+            if sessionManager.isRecording {
+                sessionManager.addBLESample(
+                    latitude: bleManager.latitude,
+                    longitude: bleManager.longitude,
+                    altitude: bleManager.altitude,
+                    speed: bleManager.speed,
+                    heading: bleManager.heading,
+                    fixStatus: bleManager.fixStatus,
+                    satellites: bleManager.numSatellites,
+                    pdop: bleManager.pdop
+                )
+            }
         }
     }
 }
@@ -39,6 +60,7 @@ struct ContentView: View {
 struct DashboardView: View {
     @ObservedObject var bleManager: BLEManager
     @ObservedObject var settings: UserSettings
+    @ObservedObject var sessionManager: SessionManager
     @State private var pulseAnimation = false
     
     // Format string for GPS coordinates (7 decimal places)
@@ -128,6 +150,77 @@ struct DashboardView: View {
                     }
                     .padding(.horizontal)
                     .padding(.top, 8)
+                    
+                    // Recording Indicator
+                    if sessionManager.isRecording {
+                        VStack(spacing: 8) {
+                            HStack {
+                                Circle()
+                                    .fill(Color.red)
+                                    .frame(width: 12, height: 12)
+                                    .scaleEffect(pulseAnimation ? 1.3 : 1.0)
+                                    .opacity(pulseAnimation ? 0.5 : 1.0)
+                                    .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pulseAnimation)
+                                
+                                Text("Recording Session")
+                                    .font(.headline)
+                                    .foregroundColor(.red)
+                                
+                                Spacer()
+                                
+                                Button(action: {
+                                    sessionManager.stopRecording()
+                                }) {
+                                    Image(systemName: "stop.circle.fill")
+                                        .font(.title2)
+                                        .foregroundColor(.red)
+                                }
+                            }
+                            
+                            HStack(spacing: 20) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Samples")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text("\(sessionManager.currentSession?.samples.count ?? 0)")
+                                        .font(.system(.body, design: .monospaced))
+                                        .fontWeight(.semibold)
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Duration")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text(String(format: "%.1fs", sessionManager.currentSession?.duration ?? 0))
+                                        .font(.system(.body, design: .monospaced))
+                                        .fontWeight(.semibold)
+                                }
+                                
+                                if let session = sessionManager.currentSession, !session.samples.isEmpty {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Distance")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        Text(String(format: "%.0fm", session.totalDistance))
+                                            .font(.system(.body, design: .monospaced))
+                                            .fontWeight(.semibold)
+                                    }
+                                }
+                                
+                                Spacer()
+                            }
+                        }
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.red.opacity(0.1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.red.opacity(0.3), lineWidth: 2)
+                                )
+                        )
+                        .padding(.horizontal)
+                    }
                     
                     // GPS Position Section
                     VStack(spacing: 12) {

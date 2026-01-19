@@ -63,6 +63,14 @@ class UserSettings: ObservableObject {
         didSet { objectWillChange.send() }
     }
     
+    // Session recording settings
+    @AppStorage("sampleRateHz") var sampleRateHz: Int = 25 {
+        didSet { objectWillChange.send() }
+    }
+    @AppStorage("accuracyThreshold") var accuracyThreshold: Double = 50.0 {
+        didSet { objectWillChange.send() }
+    }
+    
     // MARK: - Unit Conversion Methods
     
     func convertSpeed(_ speedInMetersPerSecond: Double) -> Double {
