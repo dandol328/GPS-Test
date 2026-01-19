@@ -554,7 +554,8 @@ class MetricsEngine {
         let intervalStartTimestamp: Date
         let intervalStartDistance: Double
         
-        if startIdx == startIndex || samples[startIdx - 1].speed >= startSpeed {
+        if startIdx == 0 || startIdx == startIndex || samples[startIdx - 1].speed >= startSpeed {
+            // Already at or above start speed, no interpolation needed
             intervalStartTimestamp = samples[startIdx].timestamp
             intervalStartDistance = cumulativeDistances[startIdx]
         } else {
@@ -584,7 +585,8 @@ class MetricsEngine {
         let intervalEndTimestamp: Date
         let intervalEndDistance: Double
         
-        if endIdx == startIdx || samples[endIdx - 1].speed >= endSpeed {
+        if endIdx == 0 || endIdx == startIdx || samples[endIdx - 1].speed >= endSpeed {
+            // Already at or above end speed, no interpolation needed
             intervalEndTimestamp = samples[endIdx].timestamp
             intervalEndDistance = cumulativeDistances[endIdx]
         } else {
@@ -688,6 +690,7 @@ class MetricsEngine {
         let brakingStartDistance: Double
         
         if startIdx == 0 || samples[startIdx - 1].speed >= startSpeed {
+            // Already at or above start speed, no interpolation needed
             brakingStartTimestamp = samples[startIdx].timestamp
             brakingStartDistance = cumulativeDistances[startIdx]
         } else {
