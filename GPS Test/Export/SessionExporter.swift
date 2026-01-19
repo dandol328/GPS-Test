@@ -108,7 +108,10 @@ class SessionExporter {
         let timestamp = dateFormatter.string(from: session.startTime)
         
         if let name = session.name, !name.isEmpty {
-            let sanitized = name.replacingOccurrences(of: "[^a-zA-Z0-9-_]", with: "_", options: .regularExpression)
+            let allowedCharacters = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_"))
+            let sanitized = name.unicodeScalars
+                .map { allowedCharacters.contains($0) ? String($0) : "_" }
+                .joined()
             return "\(sanitized)_\(timestamp).\(format)"
         } else {
             return "gps_session_\(timestamp).\(format)"
