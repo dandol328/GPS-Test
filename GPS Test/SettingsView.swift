@@ -175,6 +175,22 @@ struct SettingsView: View {
                         .foregroundColor(.red)
                     }
                 }
+                
+                // MARK: - Recording Settings Section
+                Section(header: Text("Recording Settings"),
+                       footer: Text("Sample rate limited to 25 Hz by BLE device. Accuracy threshold affects metric reliability indicators.")) {
+                    HStack {
+                        Text("Sample Rate")
+                        Spacer()
+                        Text("\(settings.sampleRateHz) Hz")
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Stepper("Accuracy Threshold: \(Int(settings.accuracyThreshold))m", 
+                            value: $settings.accuracyThreshold, 
+                            in: 10...100, 
+                            step: 10)
+                }
             }
             .navigationTitle("Settings")
             .alert("Clear All Sessions", isPresented: $showingClearSessionsAlert) {

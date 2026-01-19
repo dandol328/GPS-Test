@@ -16,6 +16,8 @@ struct SessionDetailView: View {
     @State private var isComputingMetrics = false
     @State private var showingShareSheet = false
     @State private var shareItems: [Any] = []
+    @State private var showingExportError = false
+    @State private var exportErrorMessage = ""
     
     private var dateFormatter: DateFormatter {
         let formatter = DateFormatter()
@@ -124,13 +126,18 @@ struct SessionDetailView: View {
                 ActivityViewController(activityItems: shareItems)
             }
         }
+        .alert("Export Error", isPresented: $showingExportError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(exportErrorMessage)
+        }
     }
     
     private func computeMetrics() {
         isComputingMetrics = true
         DispatchQueue.global(qos: .userInitiated).async {
             let engine = MetricsEngine()
-            let summary = engine.computeMetrics(session: session, accuracyThreshold: 50.0)
+            let summary = engine.computeMetrics(session: session, accuracyThreshold: settings.accuracyThreshold)
             DispatchQueue.main.async {
                 self.metrics = summary
                 self.isComputingMetrics = false
@@ -139,7 +146,11 @@ struct SessionDetailView: View {
     }
     
     private func exportToFormat(_ format: String) {
-        guard !session.samples.isEmpty else { return }
+        guard !session.samples.isEmpty else {
+            exportErrorMessage = "Session contains no samples to export."
+            showingExportError = true
+            return
+        }
         
         let data: Data?
         switch format {
@@ -155,7 +166,11 @@ struct SessionDetailView: View {
             return
         }
         
-        guard let exportData = data else { return }
+        guard let exportData = data else {
+            exportErrorMessage = "Failed to generate \(format.uppercased()) export data."
+            showingExportError = true
+            return
+        }
         
         let filename = SessionExporter.suggestedFilename(for: session, format: format)
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
@@ -165,15 +180,21 @@ struct SessionDetailView: View {
             shareItems = [tempURL]
             showingShareSheet = true
         } catch {
-            print("Failed to write export file: \(error)")
+            exportErrorMessage = "Failed to save export file: \(error.localizedDescription)"
+            showingExportError = true
         }
     }
     
     private func exportAllFormats() {
-        guard !session.samples.isEmpty else { return }
+        guard !session.samples.isEmpty else {
+            exportErrorMessage = "Session contains no samples to export."
+            showingExportError = true
+            return
+        }
         
         let exports = SessionExporter.exportToAllFormats(session: session, metrics: metrics)
         var urls: [URL] = []
+        var failedFormats: [String] = []
         
         for (format, data) in exports {
             let filename = SessionExporter.suggestedFilename(for: session, format: format)
@@ -183,13 +204,21 @@ struct SessionDetailView: View {
                 try data.write(to: tempURL)
                 urls.append(tempURL)
             } catch {
-                print("Failed to write \(format) file: \(error)")
+                failedFormats.append(format.uppercased())
             }
         }
         
         if !urls.isEmpty {
             shareItems = urls
             showingShareSheet = true
+            
+            if !failedFormats.isEmpty {
+                exportErrorMessage = "Some exports failed: \(failedFormats.joined(separator: ", "))"
+                showingExportError = true
+            }
+        } else {
+            exportErrorMessage = "All exports failed. Please try individual formats."
+            showingExportError = true
         }
     }
 }

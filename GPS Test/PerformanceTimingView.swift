@@ -99,7 +99,7 @@ struct PerformanceTimingView: View {
                     VStack(spacing: 12) {
                         if !sessionManager.isRecording {
                             Button(action: {
-                                sessionManager.startRecording(sampleRateHz: 25)
+                                sessionManager.startRecording(sampleRateHz: settings.sampleRateHz)
                                 currentMetrics = nil
                                 showingResults = false
                             }) {
@@ -118,7 +118,7 @@ struct PerformanceTimingView: View {
                                     // Compute metrics immediately after stopping
                                     DispatchQueue.global(qos: .userInitiated).async {
                                         let engine = MetricsEngine()
-                                        let summary = engine.computeMetrics(session: session, accuracyThreshold: 50.0)
+                                        let summary = engine.computeMetrics(session: session, accuracyThreshold: settings.accuracyThreshold)
                                         DispatchQueue.main.async {
                                             currentMetrics = summary
                                             showingResults = true
