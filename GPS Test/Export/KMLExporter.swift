@@ -10,6 +10,13 @@ import Foundation
 /// Exports session data to KML format
 struct KMLExporter {
     
+    // KML color constants (KML uses AABBGGRR format)
+    private static let trackLineColor = "ff0000ff"  // Red
+    private static let startPointColor = "ff00ff00"  // Green
+    private static let endPointColor = "ff0000ff"  // Red
+    private static let trackLineWidth = "3"
+    private static let pointIconScale = "1.2"
+    
     /// Export session to KML format with track and placemarks
     /// - Parameter session: Recording session to export
     /// - Returns: KML XML data or nil on error
@@ -118,24 +125,24 @@ struct KMLExporter {
         // Track line style
         styles += "    <Style id=\"trackStyle\">\n"
         styles += "      <LineStyle>\n"
-        styles += "        <color>ff0000ff</color>\n"  // Red line
-        styles += "        <width>3</width>\n"
+        styles += "        <color>\(trackLineColor)</color>\n"
+        styles += "        <width>\(trackLineWidth)</width>\n"
         styles += "      </LineStyle>\n"
         styles += "    </Style>\n"
         
         // Start point style
         styles += "    <Style id=\"startStyle\">\n"
         styles += "      <IconStyle>\n"
-        styles += "        <color>ff00ff00</color>\n"  // Green
-        styles += "        <scale>1.2</scale>\n"
+        styles += "        <color>\(startPointColor)</color>\n"
+        styles += "        <scale>\(pointIconScale)</scale>\n"
         styles += "      </IconStyle>\n"
         styles += "    </Style>\n"
         
         // End point style
         styles += "    <Style id=\"endStyle\">\n"
         styles += "      <IconStyle>\n"
-        styles += "        <color>ff0000ff</color>\n"  // Red
-        styles += "        <scale>1.2</scale>\n"
+        styles += "        <color>\(endPointColor)</color>\n"
+        styles += "        <scale>\(pointIconScale)</scale>\n"
         styles += "      </IconStyle>\n"
         styles += "    </Style>\n"
         
