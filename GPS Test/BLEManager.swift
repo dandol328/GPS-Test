@@ -9,6 +9,12 @@
 import CoreBluetooth
 import Foundation
 
+struct DiscoveredDevice: Identifiable {
+    let id: UUID
+    let name: String
+    let rssi: Int?
+}
+
 class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     // Connection state enum for clearer state management
     private enum ConnectionState {
@@ -91,6 +97,8 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     @Published var batteryLevel: Int = 0  // 0-100%
     @Published var isCharging: Bool = false
     @Published var updateRate: Double = 0.0  // Hz
+    @Published var connectedDeviceName: String = ""
+    @Published var discoveredDevices: [DiscoveredDevice] = []
     
     // Data rate tracking
     private var lastUpdateTime: Date?
@@ -100,6 +108,7 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     // BLE properties
     private var centralManager: CBCentralManager!
     private var connectedPeripheral: CBPeripheral?
+    private var peripheralsByID: [UUID: CBPeripheral] = [:]
     private var txCharacteristic: CBCharacteristic?
     private var connectionState: ConnectionState = .disconnected
     
@@ -124,12 +133,44 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         }
         
         connectionState = .scanning
+        peripheralsByID.removeAll()
+        DispatchQueue.main.async { self.discoveredDevices.removeAll() }
+        
         DispatchQueue.main.async {
             self.isScanning = true
             self.statusMessage = "Scanning for RaceBox..."
         }
         
         centralManager.scanForPeripherals(withServices: [serviceUUID], options: nil)
+    }
+    
+    func stopScanning() {
+        guard isScanning else { return }
+        centralManager.stopScan()
+        if connectionState == .scanning { connectionState = .disconnected }
+        DispatchQueue.main.async {
+            self.isScanning = false
+            if !self.isConnected {
+                if self.discoveredDevices.isEmpty {
+                    self.statusMessage = "No devices found"
+                } else {
+                    self.statusMessage = "Scan stopped"
+                }
+            }
+        }
+    }
+    
+    func connect(to device: DiscoveredDevice) {
+        guard let peripheral = peripheralsByID[device.id] else { return }
+        centralManager.stopScan()
+        connectionState = .connecting
+        connectedPeripheral = peripheral
+        peripheral.delegate = self
+        DispatchQueue.main.async {
+            self.isScanning = false
+            self.statusMessage = "Connecting to \(device.name)..."
+        }
+        centralManager.connect(peripheral, options: nil)
     }
     
     func disconnect() {
@@ -141,6 +182,7 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate {
             self.isConnected = false
             self.isScanning = false
             self.statusMessage = "Disconnected"
+            self.connectedDeviceName = ""
         }
     }
     
@@ -299,19 +341,25 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         guard let name = peripheral.name, name.hasPrefix(ProtocolConstants.deviceNamePrefix) else {
             return
         }
-        
-        // Stop scanning and connect
-        centralManager.stopScan()
-        connectionState = .connecting
-        connectedPeripheral = peripheral
-        peripheral.delegate = self
-        
+
+        // Track peripheral by ID for later connection
+        peripheralsByID[peripheral.identifier] = peripheral
+
+        let id = peripheral.identifier
+        let device = DiscoveredDevice(id: id, name: name, rssi: RSSI.intValue)
+
+        // Update or insert discovered device
         DispatchQueue.main.async {
-            self.isScanning = false
-            self.statusMessage = "Connecting to \(name)..."
+            if let index = self.discoveredDevices.firstIndex(where: { $0.id == id }) {
+                self.discoveredDevices[index] = device
+            } else {
+                self.discoveredDevices.append(device)
+            }
+            if self.isScanning {
+                let count = self.discoveredDevices.count
+                self.statusMessage = count == 1 ? "Found 1 device" : "Found \(count) devices"
+            }
         }
-        
-        centralManager.connect(peripheral, options: nil)
     }
     
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
@@ -319,6 +367,7 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         DispatchQueue.main.async {
             self.isConnected = true
             self.statusMessage = "Connected"
+            self.connectedDeviceName = peripheral.name ?? "Unknown"
         }
         
         // Discover services
@@ -333,6 +382,7 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate {
             self.isConnected = false
             self.isScanning = false
             self.statusMessage = "Failed to connect"
+            self.connectedDeviceName = ""
         }
     }
     
@@ -345,6 +395,7 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate {
             self.isConnected = false
             self.isScanning = false
             self.statusMessage = "Disconnected"
+            self.connectedDeviceName = ""
         }
     }
 }
@@ -386,3 +437,4 @@ extension BLEManager: CBPeripheralDelegate {
         parsePacket(data)
     }
 }
+

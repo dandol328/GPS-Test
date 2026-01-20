@@ -35,7 +35,7 @@ class MinMaxTracker: ObservableObject {
         minGForceZ = min(minGForceZ, gz)
         
         // Calculate combined G-force (forward/backward acceleration)
-        let combinedG = sqrt(gx * gx + gy * gy + gz * gz)
+        _ = sqrt(gx * gx + gy * gy + gz * gz)
         maxAcceleration = max(maxAcceleration, gx)  // Positive X is forward
         maxDeceleration = max(maxDeceleration, -gx)  // Negative X is backward (braking)
     }
@@ -85,122 +85,130 @@ struct MinMaxView: View {
     @ObservedObject var bleManager: BLEManager
     @ObservedObject var settings: UserSettings
     @StateObject private var tracker = MinMaxTracker()
-    
+    @State private var showingDevicePicker = false
+
+    private var currentSessionSection: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text("Current Session")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                Spacer()
+            }
+            MinMaxCard(
+                title: "Max Speed",
+                value: settings.convertSpeed(tracker.maxSpeed),
+                unit: settings.speedUnitLabel(),
+                icon: "speedometer",
+                color: .blue
+            )
+            HStack(spacing: 12) {
+                MinMaxCard(
+                    title: "Max Alt",
+                    value: settings.convertAltitude(tracker.maxAltitude == -Double.infinity ? 0 : tracker.maxAltitude),
+                    unit: settings.altitudeUnitLabel(),
+                    icon: "arrow.up",
+                    color: .green
+                )
+                MinMaxCard(
+                    title: "Min Alt",
+                    value: settings.convertAltitude(tracker.minAltitude == Double.infinity ? 0 : tracker.minAltitude),
+                    unit: settings.altitudeUnitLabel(),
+                    icon: "arrow.down",
+                    color: .orange
+                )
+            }
+            HStack(spacing: 12) {
+                MinMaxCard(
+                    title: "Max Accel",
+                    value: tracker.maxAcceleration,
+                    unit: "g",
+                    icon: "arrow.right",
+                    color: .red
+                )
+                MinMaxCard(
+                    title: "Max Decel",
+                    value: tracker.maxDeceleration,
+                    unit: "g",
+                    icon: "arrow.left",
+                    color: .purple
+                )
+            }
+            VStack(spacing: 8) {
+                MinMaxRowCard(title: "G-Force X", min: tracker.minGForceX, max: tracker.maxGForceX)
+                MinMaxRowCard(title: "G-Force Y", min: tracker.minGForceY, max: tracker.maxGForceY)
+                MinMaxRowCard(title: "G-Force Z", min: tracker.minGForceZ, max: tracker.maxGForceZ)
+            }
+        }
+        .padding()
+    }
+
+    private var controlButtons: some View {
+        HStack(spacing: 16) {
+            Button(action: {
+                tracker.saveSession()
+            }) {
+                Label("Save Session", systemImage: "tray.and.arrow.down")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+            }
+            Button(action: {
+                tracker.reset()
+            }) {
+                Label("Reset", systemImage: "arrow.counterclockwise")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.orange)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    private var savedSessionsSection: some View {
+        Group {
+            if !tracker.sessions.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Saved Sessions")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .padding(.horizontal)
+                    ForEach(tracker.sessions) { session in
+                        SessionCard(session: session, settings: settings)
+                            .padding(.horizontal)
+                    }
+                }
+                .padding(.top)
+            }
+        }
+    }
+
+
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
-                    // Current Session
-                    VStack(spacing: 12) {
-                        HStack {
-                            Text("Current Session")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                            Spacer()
-                        }
-                        
-                        // Speed
-                        MinMaxCard(
-                            title: "Max Speed",
-                            value: settings.convertSpeed(tracker.maxSpeed),
-                            unit: settings.speedUnitLabel(),
-                            icon: "speedometer",
-                            color: .blue
-                        )
-                        
-                        // Altitude
-                        HStack(spacing: 12) {
-                            MinMaxCard(
-                                title: "Max Alt",
-                                value: settings.convertAltitude(tracker.maxAltitude == -Double.infinity ? 0 : tracker.maxAltitude),
-                                unit: settings.altitudeUnitLabel(),
-                                icon: "arrow.up",
-                                color: .green
-                            )
-                            
-                            MinMaxCard(
-                                title: "Min Alt",
-                                value: settings.convertAltitude(tracker.minAltitude == Double.infinity ? 0 : tracker.minAltitude),
-                                unit: settings.altitudeUnitLabel(),
-                                icon: "arrow.down",
-                                color: .orange
-                            )
-                        }
-                        
-                        // G-Forces
-                        HStack(spacing: 12) {
-                            MinMaxCard(
-                                title: "Max Accel",
-                                value: tracker.maxAcceleration,
-                                unit: "g",
-                                icon: "arrow.right",
-                                color: .red
-                            )
-                            
-                            MinMaxCard(
-                                title: "Max Decel",
-                                value: tracker.maxDeceleration,
-                                unit: "g",
-                                icon: "arrow.left",
-                                color: .purple
-                            )
-                        }
-                        
-                        // G-Force Details
-                        VStack(spacing: 8) {
-                            MinMaxRowCard(title: "G-Force X", min: tracker.minGForceX, max: tracker.maxGForceX)
-                            MinMaxRowCard(title: "G-Force Y", min: tracker.minGForceY, max: tracker.maxGForceY)
-                            MinMaxRowCard(title: "G-Force Z", min: tracker.minGForceZ, max: tracker.maxGForceZ)
-                        }
-                    }
-                    .padding()
-                    
-                    // Control Buttons
-                    HStack(spacing: 16) {
-                        Button(action: {
-                            tracker.saveSession()
-                        }) {
-                            Label("Save Session", systemImage: "tray.and.arrow.down")
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
-                        }
-                        
-                        Button(action: {
-                            tracker.reset()
-                        }) {
-                            Label("Reset", systemImage: "arrow.counterclockwise")
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.orange)
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
-                        }
-                    }
-                    .padding(.horizontal)
-                    
-                    // Saved Sessions
-                    if !tracker.sessions.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Saved Sessions")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .padding(.horizontal)
-                            
-                            ForEach(tracker.sessions) { session in
-                                SessionCard(session: session, settings: settings)
-                                    .padding(.horizontal)
-                            }
-                        }
-                        .padding(.top)
-                    }
+                    currentSessionSection
+                    controlButtons
+                    savedSessionsSection
                 }
                 .padding(.vertical)
             }
             .navigationTitle("Min / Max")
-            .onChange(of: bleManager.speed) { _ in
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        bleManager.startScanning()
+                    } label: {
+                        Label("Connect", systemImage: "dot.radiowaves.left.and.right")
+                    }
+                }
+            }
+            .onChange(of: bleManager.speed) { oldValue, newValue in
                 let orientedG = settings.applyOrientationMapping(
                     x: bleManager.accelerometerX,
                     y: bleManager.accelerometerY,
@@ -348,3 +356,4 @@ struct SessionCard: View {
 #Preview {
     MinMaxView(bleManager: BLEManager(), settings: UserSettings())
 }
+
