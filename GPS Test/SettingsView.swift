@@ -25,21 +25,53 @@ struct SettingsView: View {
                         Text(bleManager.statusMessage)
                             .foregroundColor(.secondary)
                     }
-                    
+
                     if !bleManager.isConnected {
-                        Button(action: {
+                        Button {
                             bleManager.startScanning()
-                        }) {
+                        } label: {
                             HStack {
                                 Image(systemName: "antenna.radiowaves.left.and.right")
-                                Text(bleManager.isScanning ? "Scanning..." : "Connect to RaceBox")
+                                Text(bleManager.isScanning ? "Scanning..." : "Scan for Devices")
                             }
                         }
                         .disabled(bleManager.isScanning)
+                        
+                        if bleManager.isScanning && bleManager.discoveredDevices.isEmpty {
+                            Text("Scanning for nearby devices...")
+                                .foregroundColor(.secondary)
+                        }
+
+                        ForEach(bleManager.discoveredDevices, id: \.id) { device in
+                            Button {
+                                bleManager.connect(to: device)
+                            } label: {
+                                HStack {
+                                    Image(systemName: "dot.radiowaves.left.and.right")
+                                    Text(device.name.isEmpty ? "Unnamed" : device.name)
+                                    Spacer()
+                                    if let rssi = device.rssi {
+                                        Text("\(rssi) dBm")
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                            }
+                        }
+
+                        if bleManager.isScanning {
+                            Button {
+                                bleManager.stopScanning()
+                            } label: {
+                                HStack {
+                                    Image(systemName: "stop.circle")
+                                    Text("Stop Scanning")
+                                }
+                            }
+                        }
                     } else {
-                        Button(action: {
+                        Button {
                             bleManager.disconnect()
-                        }) {
+                        } label: {
                             HStack {
                                 Image(systemName: "xmark.circle")
                                 Text("Disconnect")
@@ -208,3 +240,4 @@ struct SettingsView: View {
 #Preview {
     SettingsView(bleManager: BLEManager(), settings: UserSettings(), sessionManager: SessionManager())
 }
+

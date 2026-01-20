@@ -272,26 +272,28 @@ struct MetricCard: View {
                         .fontWeight(.semibold)
                 }
                 
-                if result.metricType.isDistanceBased {
+                if result.metricType.isDistanceBased, let trap = result.trapSpeed {
                     HStack {
                         Text("Trap Speed:")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         Spacer()
-                        Text(String(format: "%.2f %@", settings.convertSpeed(result.trapSpeed), settings.speedUnitLabel()))
+                        Text(String(format: "%.2f %@", settings.convertSpeed(trap), settings.speedUnitLabel()))
                             .font(.system(.body, design: .monospaced))
                             .fontWeight(.semibold)
                     }
                 }
                 
-                HStack {
-                    Text("Peak Speed:")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text(String(format: "%.2f %@", settings.convertSpeed(result.peakSpeed), settings.speedUnitLabel()))
-                        .font(.system(.body, design: .monospaced))
-                        .fontWeight(.semibold)
+                if let peak = result.peakSpeed {
+                    HStack {
+                        Text("Peak Speed:")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(String(format: "%.2f %@", settings.convertSpeed(peak), settings.speedUnitLabel()))
+                            .font(.system(.body, design: .monospaced))
+                            .fontWeight(.semibold)
+                    }
                 }
                 
                 HStack {

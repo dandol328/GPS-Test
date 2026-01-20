@@ -39,7 +39,7 @@ struct ContentView: View {
                     Label("Settings", systemImage: "gearshape")
                 }
         }
-        .onChange(of: bleManager.speed) { _ in
+        .onChange(of: bleManager.speed) { oldValue, newValue in
             // Add BLE samples to session when recording
             if sessionManager.isRecording {
                 sessionManager.addBLESample(
@@ -111,16 +111,17 @@ struct DashboardView: View {
                                 .foregroundColor(.secondary)
                             
                             Spacer()
-                            
-                            if bleManager.isConnected {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "antenna.radiowaves.left.and.right")
-                                        .font(.caption)
-                                        .foregroundColor(.green)
-                                    Text(String(format: "%.1f Hz", bleManager.updateRate))
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
+                        }
+                        
+                        if bleManager.isConnected && !bleManager.connectedDeviceName.isEmpty {
+                            HStack(spacing: 6) {
+                                Image(systemName: "dot.radiowaves.left.and.right")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text(bleManager.connectedDeviceName)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Spacer()
                             }
                         }
                         
@@ -169,7 +170,7 @@ struct DashboardView: View {
                                 Spacer()
                                 
                                 Button(action: {
-                                    sessionManager.stopRecording()
+                                    _ = sessionManager.stopRecording()
                                 }) {
                                     Image(systemName: "stop.circle.fill")
                                         .font(.title2)
@@ -396,3 +397,4 @@ struct DataCard: View {
 #Preview {
     ContentView()
 }
+
